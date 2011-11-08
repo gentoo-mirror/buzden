@@ -33,5 +33,6 @@ src_install() {
 
 	dodir /usr/bin
 	dosym /opt/srware-iron/iron /usr/bin/iron
+	dosym "../../usr/lib/nsbrowser/plugins" "/opt/srware-iron/plugins"
 }
 
