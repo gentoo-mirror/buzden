@@ -44,15 +44,15 @@ RDEPEND="app-arch/bzip2
 	x11-misc/xdg-utils"
 
 src_unpack() {
-	unpack ${A}
+	unpack "${A}"
 }
 
 src_install() {
-	dodir /opt/srware-iron
+	dodir "/opt/srware-iron"
 	cp -pPR ${WORKDIR}/iron-linux*/* ${D}/opt/srware-iron
 
-	dodir /usr/bin
-	dosym /opt/srware-iron/iron /usr/bin/iron
+	dodir "/usr/bin"
+	dosym "/opt/srware-iron/iron" "/usr/bin/iron"
 	dosym "../../usr/lib/nsbrowser/plugins" "/opt/srware-iron/plugins"
 }
 
