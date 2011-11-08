@@ -15,13 +15,33 @@ SLOT="0"
 KEYWORDS="x86 amd64"
 
 IUSE=""
-DEPEND="
-	x11-libs/libXScrnSaver
-	x11-libs/gtk+
+RDEPEND="app-arch/bzip2
+	app-misc/ca-certificates
+	media-libs/alsa-lib
+	dev-libs/atk
+	dev-libs/dbus-glib
+	dev-libs/expat
+	dev-libs/glib:2
+	dev-libs/libxslt
+	dev-libs/nspr
 	dev-libs/nss
-	gnome-base/gconf
-	=media-libs/libpng-1.2.46"
-	# TODO to know what other libraries are used.
+	gnome-base/gconf:2
+	media-libs/fontconfig
+	media-libs/freetype
+	net-print/cups
+	media-libs/libpng:1.2
+	sys-apps/dbus
+	>=sys-devel/gcc-4.4.0[-nocxx]
+	sys-libs/zlib
+	x11-libs/cairo
+	x11-libs/gdk-pixbuf
+	x11-libs/gtk+:2
+	x11-libs/libXScrnSaver
+	x11-libs/libX11
+	x11-libs/libXrender
+	x11-libs/libXext
+	x11-libs/pango
+	x11-misc/xdg-utils"
 
 src_unpack() {
 	unpack ${A}
