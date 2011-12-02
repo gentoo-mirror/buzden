@@ -1,7 +1,3 @@
-# Copyright 1999-2009 Gentoo Foundation
-# Distributed under the terms of the GNU General Public License v2
-# $Header: $
-
 inherit eutils
 DESCRIPTION="CVC3"
 HOMEPAGE="http://www.cs.nyu.edu/acsys/cvc3/"
