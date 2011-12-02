@@ -9,8 +9,11 @@ IUSE=""
 DEPEND=""
 RDEPEND="${DEPEND}"
 
+# TODO to install libs, headers and ocaml binding (and to add appropriate use flags).
+
 src_install() {
-	dobin bin/z3
-#	dolib.a lib/*.a
-#	dolib.so lib/*.so
+	dobin ${WORKDIR}/z3/bin/z3
+
+#	dolib.a ${WORKDIR}/z3/lib/*.a
+#	dolib.so ${WORKDIR}/z3/lib/*.so
 }
