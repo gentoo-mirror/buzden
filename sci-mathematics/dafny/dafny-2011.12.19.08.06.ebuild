@@ -28,6 +28,7 @@ pkg_nofetch() {
 
 src_install() {
 	DAFNY_DIR="/opt/dafny"
+	Z3_PLACE="../../usr/bin/z3"
 
 	dodir "${DAFNY_DIR}"
 	cp -pPR "${WORKDIR}"/* "${D}${DAFNY_DIR}"
@@ -39,7 +40,7 @@ src_install() {
 
 	rename Provers.SMTLib Provers.SMTLIB "${D}${DAFNY_DIR}"/*
 
-	dosym "/usr/bin/z3" "${DAFNY_DIR}/z3.exe"
+	dosym "${Z3_PLACE}" "${DAFNY_DIR}/z3.exe"
 
 	# TODO to create ${WORKDIR}/dafny
 	#dobin ${WORKDIR}/dafny
