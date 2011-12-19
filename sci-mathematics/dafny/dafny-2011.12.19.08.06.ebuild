@@ -37,7 +37,7 @@ src_install() {
 	rm -f "${D}${DAFNY_DIR}"/Provers.Simplify.*
 	rm -f "${D}${DAFNY_DIR}"/Provers.TPTP.*
 
-	rename Provers.SMTLib Provers.SMTLIB "${WORKDIR}"/*
+	rename Provers.SMTLib Provers.SMTLIB "${D}${DAFNY_DIR}"/*
 
 	dosym "/usr/bin/z3" "${DAFNY_DIR}/z3.exe"
 
