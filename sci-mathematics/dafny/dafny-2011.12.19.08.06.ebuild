@@ -42,6 +42,17 @@ src_install() {
 
 	dosym "${Z3_PLACE}" "${DAFNY_DIR}/z3.exe"
 
-	# TODO to create ${WORKDIR}/dafny
-	#dobin ${WORKDIR}/dafny
+	echo '#!/bin/sh
+
+RUNCOMMAND="mono /opt/dafny/Dafny.exe"
+
+COMMAND=""
+while [[ "$#" > 0 ]]; do
+    COMMAND=$COMMAND" "\""$1"\"
+    shift
+done
+COMMAND="$RUNCOMMAND$COMMAND"
+
+eval $COMMAND' > "${WORKDIR}/dafny"
+	dobin ${WORKDIR}/dafny
 }
