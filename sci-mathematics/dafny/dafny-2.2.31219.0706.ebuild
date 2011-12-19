@@ -44,6 +44,14 @@ src_install() {
 
 	echo '#!/bin/sh
 
+if [[ "$1" == "-s" ]]; then
+    COMMAND_SUFFIX=" | grep -v \"Execution trace:\|): anon\""
+
+    shift
+else
+    COMMAND_SUFFIX=""
+fi
+
 RUNCOMMAND="mono /opt/dafny/Dafny.exe"
 
 COMMAND=""
@@ -51,7 +59,7 @@ while [[ "$#" > 0 ]]; do
     COMMAND=$COMMAND" "\""$1"\"
     shift
 done
-COMMAND="$RUNCOMMAND$COMMAND"
+COMMAND="$RUNCOMMAND$COMMAND$COMMAND_SUFFIX"
 
 eval $COMMAND' > "${WORKDIR}/dafny"
 	dobin ${WORKDIR}/dafny
