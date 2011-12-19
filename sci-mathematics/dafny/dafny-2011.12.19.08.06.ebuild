@@ -4,7 +4,7 @@
 
 inherit eutils
 
-EAPI=4
+EAPI=3
 
 DESCRIPTION="Dafny: a language and program verifier for functional correctness"
 HOMEPAGE="http://research.microsoft.com/en-us/projects/dafny/"
@@ -26,10 +26,6 @@ pkg_nofetch() {
 	einfo "You should download appropriate boogie-archive and place it to ${DISTDIR}/${SRC_URI}"
 }
 
-src_unpack() {
-	unpack ${A}
-}
-
 src_install() {
 	DAFNY_DIR="/opt/dafny"
 
@@ -43,13 +39,8 @@ src_install() {
 
 	rename Provers.SMTLib Provers.SMTLIB "${WORKDIR}"/*
 
-	dosym "/usr/bin/z3" "${D}${DAFNY_DIR}/z3.exe"
+	dosym "/usr/bin/z3" "${DAFNY_DIR}/z3.exe"
 
 	# TODO to create ${WORKDIR}/dafny
 	#dobin ${WORKDIR}/dafny
-}
-
-pkg_postinst() {
-	cd /opt/pvs
-	bin/relocate
 }
