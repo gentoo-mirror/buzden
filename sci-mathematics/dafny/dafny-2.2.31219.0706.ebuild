@@ -17,7 +17,8 @@ KEYWORDS="amd64 x86"
 IUSE=""
 RDEPEND="
 	>=dev-lang/mono-2.8
-	>=sci-mathematics/z3-2.2"
+	>=sci-mathematics/z3-2.2
+	sys-apps/grep"
 
 RESTRICT="fetch strip"
 
