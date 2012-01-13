@@ -53,6 +53,11 @@ src_install() {
 
 	dodir "/usr/bin"
 	dosym "/opt/srware-iron/iron" "/usr/bin/iron"
-	dosym "../../usr/lib/nsbrowser/plugins" "/opt/srware-iron/plugins"
+	if use x86; then
+		dosym "../../usr/lib/nsbrowser/plugins" "/opt/srware-iron/plugins"
+	fi
+	if use amd64; then
+		dosym "../../usr/lib64/nsbrowser/plugins" "/opt/srware-iron/plugins"
+	fi
 }
 
