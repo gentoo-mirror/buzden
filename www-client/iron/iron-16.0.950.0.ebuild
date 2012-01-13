@@ -6,8 +6,8 @@ EAPI="2"
 inherit eutils
 
 DESCRIPTION="SRWare Iron web browser -- chromium-based browser"
-HOMEPAGE="http://srware,net/"
-SRC_HEAD="http://srware.net/downloads/${PN}"
+HOMEPAGE="http://www.srware,net/"
+SRC_HEAD="http://www.srware.net/downloads/${PN}"
 SRC_URI="amd64? ( ${SRC_HEAD}-linux-64.tar.gz ) x86? ( ${SRC_HEAD}-linux.tar.gz )"
 
 LICENSE="as-is"
