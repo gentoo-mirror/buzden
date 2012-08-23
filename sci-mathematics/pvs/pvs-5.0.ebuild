@@ -2,9 +2,9 @@
 # Distributed under the terms of the GNU General Public License v2
 # $Header: /cvs/zport/sci-mathematics/pvs/pvs-3.2.ebuild,v 1.1.1.1 2006/11/22 16:05:34 zechs Exp $
 
-inherit eutils
-
 EAPI=2
+
+inherit eutils
 
 DESCRIPTION="PVS - a theorem prover for formal specification and verification"
 HOMEPAGE="http://pvs.csl.sri.com/"

@@ -2,9 +2,9 @@
 # Distributed under the terms of the GNU General Public License v2
 # $Header: /cvs/zport/sci-mathematics/pvs/pvs-3.2.ebuild,v 1.1.1.1 2006/11/22 16:05:34 zechs Exp $
 
-inherit eutils
-
 EAPI=3
+
+inherit eutils
 
 DESCRIPTION="Dafny: a language and program verifier for functional correctness"
 HOMEPAGE="http://research.microsoft.com/en-us/projects/dafny/"
