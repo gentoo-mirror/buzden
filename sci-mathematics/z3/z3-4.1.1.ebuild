@@ -1,6 +1,6 @@
 EAPI=4
 
-inherit eutils
+inherit eutils autotools
 
 DESCRIPTION="An efficient theorem prover"
 HOMEPAGE="http://z3.codeplex.com/"
@@ -15,7 +15,7 @@ RDEPEND="${DEPEND}"
 S="${WORKDIR}/z3"
 
 src_prepare() {
-	autoconf
+	eautoconf
 }
 
 src_install() {
