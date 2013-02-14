@@ -1,7 +1,7 @@
-Index: new_server_html.c
+Index: ejudge/new_server_html.c
 ===================================================================
---- new_server_html.c	(revision 7330)
-+++ new_server_html.c	(working copy)
+--- ejudge/new_server_html.c	(revision 7330)
++++ ejudge/new_server_html.c	(working copy)
 @@ -10618,7 +10618,7 @@
    if (!admin_mode && stop_time > 0) {
      FAIL(NEW_SRV_ERR_CONTEST_ALREADY_FINISHED);
@@ -44,10 +44,10 @@ Index: new_server_html.c
      FAIL(NEW_SRV_ERR_RUN_QUOTA_EXCEEDED);
    // problem submit start time
    if (!serve_is_problem_started(cs, phr->user_id, prob))
-Index: serve_2.c
+Index: ejudge/serve_2.c
 ===================================================================
---- serve_2.c	(revision 7330)
-+++ serve_2.c	(working copy)
+--- ejudge/serve_2.c	(revision 7330)
++++ ejudge/serve_2.c	(working copy)
 @@ -391,16 +391,22 @@
  }
  
@@ -72,10 +72,10 @@ Index: serve_2.c
    return 0;
  }
  
-Index: new_server_html_4.c
+Index: ejudge/new_server_html_4.c
 ===================================================================
---- new_server_html_4.c	(revision 7330)
-+++ new_server_html_4.c	(working copy)
+--- ejudge/new_server_html_4.c	(revision 7330)
++++ ejudge/new_server_html_4.c	(working copy)
 @@ -964,7 +964,7 @@
        FAIL(NEW_SRV_ERR_CONTEST_NOT_STARTED);
      if (stop_time)
@@ -85,10 +85,10 @@ Index: new_server_html_4.c
        FAIL(NEW_SRV_ERR_RUN_QUOTA_EXCEEDED);
      if (!serve_is_problem_started(cs, phr->user_id, prob))
        FAIL(NEW_SRV_ERR_PROB_UNAVAILABLE);
-Index: runlog.c
+Index: ejudge/runlog.c
 ===================================================================
---- runlog.c	(revision 7330)
-+++ runlog.c	(working copy)
+--- ejudge/runlog.c	(revision 7330)
++++ ejudge/runlog.c	(working copy)
 @@ -719,6 +719,28 @@
    if (ps) *ps = sz;
  }
@@ -118,10 +118,10 @@ Index: runlog.c
  /* FIXME: VERY DUMB */
  int
  run_get_attempts(
-Index: runlog.h
+Index: ejudge/runlog.h
 ===================================================================
---- runlog.h	(revision 7330)
-+++ runlog.h	(working copy)
+--- ejudge/runlog.h	(revision 7330)
++++ ejudge/runlog.h	(working copy)
 @@ -163,6 +163,7 @@
  time_t run_get_duration(runlog_state_t);
  
@@ -130,10 +130,10 @@ Index: runlog.h
  int  run_get_attempts(runlog_state_t, int, int *, int *, int);
  int run_count_all_attempts(runlog_state_t state, int user_id, int prob_id);
  char *run_status_str(int, char *, int, int, int);
-Index: serve_state.h
+Index: ejudge/serve_state.h
 ===================================================================
---- serve_state.h	(revision 7330)
-+++ serve_state.h	(working copy)
+--- ejudge/serve_state.h	(revision 7330)
++++ ejudge/serve_state.h	(working copy)
 @@ -341,7 +341,7 @@
  void serve_load_status_file(serve_state_t state);
  void serve_remove_status_file(serve_state_t state);
@@ -143,10 +143,10 @@ Index: serve_state.h
  int serve_check_clar_quota(serve_state_t, int user_id, size_t size);
  
  int serve_check_cnts_caps(serve_state_t state, const struct contest_desc *,
-Index: new_server_html_2.c
+Index: ejudge/new_server_html_2.c
 ===================================================================
---- new_server_html_2.c	(revision 7330)
-+++ new_server_html_2.c	(working copy)
+--- ejudge/new_server_html_2.c	(revision 7330)
++++ ejudge/new_server_html_2.c	(working copy)
 @@ -7173,7 +7173,7 @@
    fprintf(fout, "<th%s>%s</th>", cl, _("Status"));
    if (global->score_system == SCORE_OLYMPIAD && accepting_mode) {
