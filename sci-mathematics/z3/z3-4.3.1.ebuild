@@ -10,7 +10,7 @@ KEYWORDS="amd64 x86"
 
 SLOT="0"
 IUSE=""
-DEPEND="app-arch/unzip sys-devel/autoconf dev-lang/python dev-vcs/git"
+DEPEND="app-arch/unzip sys-devel/autoconf dev-lang/python:2.7 dev-vcs/git"
 RDEPEND="${DEPEND}"
 
 S="${WORKDIR}/z3"
@@ -20,8 +20,8 @@ src_prepare() {
 }
 
 src_configure() {
-	econf --host=""
-	python scripts/mk_make.py
+	econf --host="" --with-python="$(which python2)"
+	python2 scripts/mk_make.py
 	# Changes for the 'make install' installation.
 #	sed 's/ \// $(DESTDIR)\//' "build/Makefile" | \
 #	sed 's/$(PREFIX)/$(DESTDIR)$(PREFIX)/' > "${WORKDIR}/tempMakefile"
