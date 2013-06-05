@@ -28,8 +28,6 @@ DEPEND="
 	jessie? ( >=sci-mathematics/frama-c-20120901 )"
 RDEPEND="${DEPEND}"
 
-PATCHES=( "${FILESDIR}"/${P}.patch )
-
 MAKEOPTS+=" -j1"
 AUTOTOOLS_IN_SOURCE_BUILD=1
 
