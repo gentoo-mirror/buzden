@@ -25,7 +25,7 @@ DEPEND="
 	coq? ( sci-mathematics/coq )
 	gappa? ( sci-mathematics/gappalib-coq )
 	pff? ( sci-mathematics/pff )
-	jessie? ( >=sci-mathematics/frama-c-20100401 )"
+	jessie? ( >=sci-mathematics/frama-c-20120901 )"
 RDEPEND="${DEPEND}"
 
 PATCHES=( "${FILESDIR}"/${P}.patch )
