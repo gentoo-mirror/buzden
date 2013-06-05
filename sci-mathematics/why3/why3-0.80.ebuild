@@ -18,7 +18,7 @@ IUSE="ide pvs coq hypothesis doc"
 DEPEND=">=dev-lang/ocaml-3.09
 		>=dev-ml/ocamlgraph-1.2
 		ide? ( >=dev-ml/lablgtk-2.14[sourceview] )
-		pvs? ( >=sci-mathematics/pvs-6.0 )
+		pvs? ( >=sci-mathematics/pvs-5.0 )
 		coq? ( sci-mathematics/coq )"
 RDEPEND="${DEPEND}"
 
