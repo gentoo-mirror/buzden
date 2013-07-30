@@ -39,4 +39,6 @@ src_configure() {
 		$(use_enable coq coq-tactic)\
 		$(use_enable hypothesis hypothesis-selection)\
 		$(use_enable doc)
+	sed -e 's:OCAMLLIB *= *:OCAMLLIB = $(DESTDIR):g' -i Makefile
+	sed -e 's:OCAMLINSTALLLIB *= *:OCAMLINSTALLLIB = $(DESTDIR):g' -i Makefile
 }
