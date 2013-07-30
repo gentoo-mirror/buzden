@@ -26,6 +26,10 @@ DEPEND=">=dev-lang/ocaml-3.09
 		coq? ( sci-mathematics/coq )"
 RDEPEND="${DEPEND}"
 
+src_prepare() {
+	eautoconf
+}
+
 src_configure() {
 	econf\
 		--disable-local\
