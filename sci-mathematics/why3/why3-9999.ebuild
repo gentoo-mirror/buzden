@@ -16,6 +16,8 @@ SLOT="0"
 KEYWORDS=""
 IUSE="+why2 ide pvs coq hypothesis doc"
 
+S="${WORKDIR}/why3"
+
 DEPEND=">=dev-lang/ocaml-3.09
 		>=dev-ml/ocamlgraph-1.2
 		why2? ( >=sci-mathematics/why-2.32 )
