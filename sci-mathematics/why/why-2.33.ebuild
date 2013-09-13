@@ -6,7 +6,7 @@ EAPI=5
 
 AUTOTOOLS_AUTORECONF=true
 
-inherit autotools-utils
+inherit autotools-utils eutils
 
 DESCRIPTION="Software verification platform"
 HOMEPAGE="http://why.lri.fr/"
@@ -32,6 +32,8 @@ MAKEOPTS+=" -j1"
 AUTOTOOLS_IN_SOURCE_BUILD=1
 
 src_prepare() {
+	epatch ${FILESDIR}/2.33/01-kornevgen.patch
+
 	sed \
 		-e "s/DESTDIR =.*//g" \
 		-e "s/@COQLIB@/\$(DESTDIR)\/@COQLIB@/g" \
