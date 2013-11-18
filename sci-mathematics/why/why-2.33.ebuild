@@ -61,6 +61,10 @@ src_configure() {
 
 src_compile(){
 	autotools-utils_src_compile DESTDIR="/"
+
+	sed \
+		-e 's/ = \/opt\// = \$(DESTDIR)\/opt\/g' \
+		-i Makefile
 }
 
 src_install(){
