@@ -34,6 +34,7 @@ AUTOTOOLS_IN_SOURCE_BUILD=1
 src_prepare() {
 	epatch ${FILESDIR}/2.33/01-kornevgen.patch
 	epatch ${FILESDIR}/2.33/02-kornevgen.patch
+	epatch ${FILESDIR}/2.33/01-buzden.patch
 
 	sed \
 		-e "s/DESTDIR =.*//g" \
