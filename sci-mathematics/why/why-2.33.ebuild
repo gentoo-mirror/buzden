@@ -21,7 +21,7 @@ DEPEND="
 	>=dev-lang/ocaml-3.09
 	>=dev-ml/ocamlgraph-1.2
 	gtk? ( >=dev-ml/lablgtk-2.14 )
-	apron? ( sci-mathematics/apron )
+	apron? ( sci-mathematics/apron[ocaml] )
 	coq? ( sci-mathematics/coq )
 	gappa? ( sci-mathematics/gappalib-coq )
 	pff? ( sci-mathematics/pff )
