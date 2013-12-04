@@ -33,6 +33,7 @@ DEPEND="${RDEPEND}"
 
 src_configure() {
 	econf \
-		$(use_with compat)
+		--disable-assertions \
+		$(use_with compat) \
 		$(use_with glpk)
 }
