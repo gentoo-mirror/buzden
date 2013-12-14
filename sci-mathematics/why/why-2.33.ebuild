@@ -36,6 +36,7 @@ src_prepare() {
 	epatch ${FILESDIR}/2.33/02-kornevgen_nonnull-for-arrays.patch
 	epatch ${FILESDIR}/2.33/01-buzden.patch
 	epatch ${FILESDIR}/2.33/01-mandrykin.patch
+	epatch ${FILESDIR}/2.33/02-mandrykin_boolean-neq.patch
 
 	sed \
 		-e "s/DESTDIR =.*//g" \
