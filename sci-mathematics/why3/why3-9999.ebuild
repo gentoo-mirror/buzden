@@ -8,7 +8,7 @@ inherit autotools eutils git-2
 
 DESCRIPTION="Why is a software verification platform."
 HOMEPAGE="http://why3.lri.fr/"
-EGIT_REPO_URI="https://gforge.inria.fr/git/why3/why3.git"
+EGIT_REPO_URI="git://scm.gforge.inria.fr/why3/why3.git"
 EGIT_COMMIT="master"
 
 LICENSE="GPL-2"
