@@ -24,7 +24,8 @@ DEPEND=">=dev-lang/ocaml-3.09
 RDEPEND="${DEPEND}"
 
 src_prepare() {
-	epatch ${FILESDIR}/0.82/destdir.patch
+	epatch ${FILESDIR}/0.82/01-destdir.patch
+	epatch ${FILESDIR}/0.82/02-destdir.patch
 
 	autotools-utils_src_prepare
 }
