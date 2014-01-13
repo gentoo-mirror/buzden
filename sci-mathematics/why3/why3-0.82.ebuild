@@ -23,6 +23,12 @@ DEPEND=">=dev-lang/ocaml-3.09
 		coq? ( sci-mathematics/coq )"
 RDEPEND="${DEPEND}"
 
+src_prepare() {
+	epatch ${FILESDIR}/0.82/destdir.patch
+
+	autotools-utils_src_prepare
+}
+
 src_configure() {
 	econf\
 		--disable-local\
