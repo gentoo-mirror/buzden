@@ -39,6 +39,9 @@ src_prepare() {
 	epatch ${FILESDIR}/2.33/02-mandrykin_boolean-neq.patch
 	epatch ${FILESDIR}/2.33/03-mandrykin_labels.patch
 	epatch ${FILESDIR}/2.33/04-mandrykin_topsort.patch
+	epatch ${FILESDIR}/2.33/05-mandrykin_bool_type.patch
+	epatch ${FILESDIR}/2.33/06-mandrykin_bool_real_eq.patch
+	epatch ${FILESDIR}/2.33/07-mandrykin-why_type_typo.patch
 
 	sed \
 		-e "s/DESTDIR =.*//g" \
