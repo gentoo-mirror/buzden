@@ -13,10 +13,10 @@ SRC_URI="http://ocamlgraph.lri.fr/download/${P}.tar.gz"
 LICENSE="LGPL-2"
 SLOT="0"
 KEYWORDS="~amd64 ~ppc ~sparc ~x86"
-IUSE="doc examples gtk +ocamlopt"
+IUSE="doc examples +ocamlopt"
 
 DEPEND=">=dev-lang/ocaml-3.10.2[ocamlopt?]
-		gtk? ( >=dev-ml/lablgtk-2.12[gnomecanvas,ocamlopt?] )"
+		>=dev-ml/lablgtk-2.12[gnomecanvas,ocamlopt?]"
 RDEPEND="${DEPEND}"
 
 src_prepare() {
