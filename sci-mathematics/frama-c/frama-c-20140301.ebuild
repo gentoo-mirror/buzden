@@ -32,6 +32,8 @@ S="${WORKDIR}/${PN/-c/-c-$NAME}-${PV/_/-}"
 src_prepare(){
 	rm share/libc/test.c
 	touch config_file
+	
+	epatch ${FILESDIR}/ocamlgraph-neon.patch
 
 	eautoreconf
 }
