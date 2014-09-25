@@ -15,7 +15,7 @@ SRC_URI="http://why.lri.fr/download/${P}.tar.gz"
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"
-IUSE="apron coq doc examples gappa gtk frama-c pff"
+IUSE="apron coq doc examples gappa gtk jessie pff"
 
 DEPEND="
 	>=dev-lang/ocaml-3.09
@@ -25,7 +25,7 @@ DEPEND="
 	coq? ( sci-mathematics/coq )
 	gappa? ( sci-mathematics/gappalib-coq )
 	pff? ( sci-mathematics/pff )
-	frama-c? ( >=sci-mathematics/frama-c-20140301 )"
+	jessie? ( >=sci-mathematics/frama-c-20140301 )"
 RDEPEND="${DEPEND}"
 
 MAKEOPTS+=" -j1"
