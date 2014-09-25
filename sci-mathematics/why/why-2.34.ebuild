@@ -25,7 +25,7 @@ DEPEND="
 	coq? ( sci-mathematics/coq )
 	gappa? ( sci-mathematics/gappalib-coq )
 	pff? ( sci-mathematics/pff )
-	jessie? ( >=sci-mathematics/frama-c-20140301 >=sci-mathematics/why3-0.03 )"
+	jessie? ( >=sci-mathematics/frama-c-20140301 >=sci-mathematics/why3-0.85 )"
 RDEPEND="${DEPEND}"
 
 MAKEOPTS+=" -j1"
@@ -34,6 +34,7 @@ AUTOTOOLS_IN_SOURCE_BUILD=1
 src_prepare() {
 	epatch ${FILESDIR}/2.33/01-kornevgen.patch
 	epatch ${FILESDIR}/2.33/02-kornevgen_nonnull-for-arrays.patch
+	epatch ${FILESDIR}/2.34/why-why3-0.85-migration.patch
 
 	sed \
 		-e "s/DESTDIR =.*//g" \
