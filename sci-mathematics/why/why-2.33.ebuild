@@ -25,7 +25,7 @@ DEPEND="
 	coq? ( sci-mathematics/coq )
 	gappa? ( sci-mathematics/gappalib-coq )
 	pff? ( sci-mathematics/pff )
-	jessie? ( >=sci-mathematics/frama-c-20130401 )"
+	jessie? ( >=sci-mathematics/frama-c-20130401 >=sci-mathematics/why3-0.82 )"
 RDEPEND="${DEPEND}"
 
 MAKEOPTS+=" -j1"
