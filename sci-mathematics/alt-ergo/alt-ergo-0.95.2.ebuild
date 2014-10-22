@@ -26,14 +26,12 @@ DEPEND="
 	)"
 RDEPEND="${DEPEND}"
 
-src_prepare(){
-	sed \
-		-e "s: /usr/share/: \$(DESTDIR)/usr/share/:g" \
-		-e "s:cp -f altgr-ergo.opt:mkdir -p \$(DESTDIR)/usr/share/gtksourceview-2.0/language-specs/\n\tcp -f altgr-ergo.opt:g" \
-		-i "${S}"/Makefile.in || die
-}
-
 src_compile(){
 	emake
 	use gtk && emake gui
+}
+
+src_install() {
+	emake DESTDIR="${D}" install
+	use gtk && emake DESTDIR="${D}" install-gui
 }
