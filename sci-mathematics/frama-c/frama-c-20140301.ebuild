@@ -18,7 +18,8 @@ IUSE="doc gtk +ocamlopt"
 RESTRICT="strip"
 
 DEPEND=">=dev-lang/ocaml-3.12.1[ocamlopt?]
-		=dev-ml/ocamlgraph-1.8.4[ocamlopt?]
+		>=dev-ml/ocamlgraph-1.8.2[ocamlopt?]
+		<=dev-ml/ocamlgraph-1.8.4[ocamlopt?]
 		dev-ml/zarith
 		sci-mathematics/ltl2ba
 		sci-mathematics/alt-ergo
