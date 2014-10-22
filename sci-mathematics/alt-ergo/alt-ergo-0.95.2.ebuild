@@ -18,6 +18,7 @@ IUSE="+ocamlopt gtk"
 DEPEND="
 	>=dev-lang/ocaml-3.10.2[ocamlopt?]
 	>=dev-ml/ocamlgraph-1.8.2[gtk?,ocamlopt?]
+	!=dev-ml/ocamlgraph-1.8.4
     dev-ml/zarith
 	gtk? (
 		x11-libs/gtksourceview:2.0
