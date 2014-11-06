@@ -37,7 +37,7 @@ AUTOTOOLS_IN_SOURCE_BUILD=1
 
 src_prepare() {
 	epatch ${FILESDIR}/2.34/why-why3-0.85-migration.patch
-	epatch ${FILESDIR}/2.34_p1/exclude-bw-axioms.patch
+	epatch ${FILESDIR}/2.34_p1/bw-fix.patch
 
 	sed \
 		-e "s/DESTDIR =.*//g" \
