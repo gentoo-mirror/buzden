@@ -18,14 +18,13 @@ EGIT_MIN_CLONE_TYPE=single
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"
-IUSE="apron doc examples gtk +jessie pff"
+IUSE="apron doc examples gtk +jessie"
 
 RDEPEND="
 	>=dev-lang/ocaml-4
 	>=dev-ml/ocamlgraph-1.2
 	gtk? ( >=dev-ml/lablgtk-2.14 )
 	apron? ( sci-mathematics/apron[ocaml] )
-	pff? ( sci-mathematics/pff )
 	jessie? ( =sci-mathematics/frama-c-20140301_p2 >=sci-mathematics/why3-0.85 )"
 DEPEND="${RDEPEND}
        >=dev-vcs/git-1.8"
