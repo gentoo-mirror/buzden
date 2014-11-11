@@ -10,7 +10,7 @@ DESCRIPTION="Framework for analysis of source codes written in C"
 HOMEPAGE="http://frama-c.com"
 EGIT_REPO_URI="http://public:test@sed.ispras.ru/git/frama-pc"
 EGIT_BRANCH="20140301"
-EGIT_COMMIT="923c38d43a332cdd2ca58b6206f7a2eee8d3c1d1"
+EGIT_COMMIT="0034afb6461b3bb406f9c3ca9e640576cbebd35b"
 EGIT_MIN_CLONE_TYPE=single
 
 LICENSE="LGPL-2"
