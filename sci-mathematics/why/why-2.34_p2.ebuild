@@ -18,10 +18,12 @@ EGIT_MIN_CLONE_TYPE=single
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"
-IUSE="apron doc examples gtk +jessie"
+IUSE="apron doc examples gtk +jessie -compat"
 
 RDEPEND="
-	>=dev-lang/ocaml-4
+	>=dev-lang/ocaml-4.01
+	compat? ( <dev-lang/ocaml-4.02 )
+	!compat? ( >=dev-lang/ocaml-4.02 )
 	>=dev-ml/ocamlgraph-1.2
 	gtk? ( >=dev-ml/lablgtk-2.14 )
 	apron? ( sci-mathematics/apron[ocaml] )
@@ -33,6 +35,8 @@ MAKEOPTS+=" -j1"
 AUTOTOOLS_IN_SOURCE_BUILD=1
 
 src_prepare() {
+	$(use compat) && epatch ${FILESDIR}/2.34_p2/ocaml-4-backward-compatibility.patch
+
 	sed \
 		-e "s/DESTDIR =.*//g" \
 		-e "s/@COQLIB@/\$(DESTDIR)\/@COQLIB@/g" \
