@@ -40,6 +40,7 @@ src_prepare() {
 	epatch ${FILESDIR}/2.34_p2/order-fix.patch
 	epatch ${FILESDIR}/2.34_p2/diverges_clause.patch
 	epatch ${FILESDIR}/2.34_p2/assigns.patch
+	epatch ${FILESDIR}/2.34_p2/ref_bug_fix.patch
 
 	sed \
 		-e "s/DESTDIR =.*//g" \
