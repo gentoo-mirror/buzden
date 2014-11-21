@@ -1,0 +1,122 @@
+diff --git a/jc/jc_interp.ml b/jc/jc_interp.ml
+index 7e7adca..45d55be 100644
+--- a/jc/jc_interp.ml
++++ b/jc/jc_interp.ml
+@@ -1196,7 +1196,7 @@ let tr_assigns ~type_safe ?region_list before ef =
+          if p then acc else
+            let at = lvar ~constant:false ~label_in_name:false in
+            make_and acc @@
+-             mk_positioned_lex ~e ~kind:JCVCassigns @@ LPred ("eq", [at LabelPost v; at before v]))
++             mk_positioned_lex ~e ~kind:JCVCassigns @@ LPred ("eq", [at LabelHere v; at before v]))
+       refs
+     |>
+     MemoryMap.fold
+@@ -1204,10 +1204,11 @@ let tr_assigns ~type_safe ?region_list before ef =
+          let args =
+            let mem = memory_name (mc, r) in
+            let at = alloc_table_name (alloc_class_of_mem_class mc, r) in
+-           [LDerefAtLabel (at, "");
+-            LDeref at;
+-            lvar ~constant:false ~label_in_name:false before mem;
+-            LDeref mem]
++           let lvar_at = lvar ~constant:false ~label_in_name:false in
++           [lvar_at before at;
++            lvar_at LabelHere at;
++            lvar_at before mem;
++            lvar_at LabelHere mem]
+          in
+          let ps, _ = List.split pes in
+          make_and acc @@
+@@ -2821,6 +2822,7 @@ and expr e =
+         in
+         assert (dec = None);
+         let ef = Jc_effect.expr Jc_pervasives.empty_fun_effect e in
++        let before = fresh_statement_label () in
+         begin match behs with
+         | [_pos, id, b] ->
+           assert (b.b_throws = None);
+@@ -2828,35 +2830,37 @@ and expr e =
+           let a =
+             assertion
+               ~type_safe:false ~global_assertion:false ~relocate:false
+-              LabelHere LabelPre b.b_ensures
++              LabelHere (LabelName before) b.b_ensures
+           in
+           let post =
+             make_and a @@
+               tr_assigns
+                 ~type_safe:false
+-                LabelPre
++                (LabelName before)
+                 ef (* infunction.fun_effects*)
+                 b.b_assigns
+           in
++          let label = make_label before.lab_final_name in
+           if safety_checking () then  begin
+             let tmp = tmp_var_name () in
++            label @@
+             mk_expr @@
+               Let (tmp,
+-                   mk_expr @@ Triple (true, r, expr e, LTrue,[]),
++                   mk_expr @@ Triple (true, r, expr e, LTrue, []),
+                    append
+                      (mk_expr @@
+                         BlackBox (Annot_type (LTrue, unit_type, [], [], post, []))) @@
+                      (mk_expr @@ Var tmp))
+           end else if is_current_behavior id then
+             if r = LTrue
+-            then mk_expr @@ Triple (true, LTrue, expr e, post, [])
++            then label @@ mk_expr @@ Triple (true, LTrue, expr e, post, [])
+             else
+               append
+-                (mk_expr @@ BlackBox (Annot_type (LTrue, unit_type, [], [], r, []))) @@
++                (label @@ mk_expr @@ BlackBox (Annot_type (LTrue, unit_type, [], [], r, []))) @@
+                 mk_expr @@ Triple (true, LTrue, expr e, post, [])
+           else
+             append
+-              (mk_expr @@ BlackBox (Annot_type (LTrue, unit_type, [], [], r, []))) @@
++              (label @@ mk_expr @@ BlackBox (Annot_type (LTrue, unit_type, [], [], r, []))) @@
+               let tmp = tmp_var_name () in
+                mk_expr @@
+                  Let (tmp,
+diff --git a/jc/jc_interp_misc.ml b/jc/jc_interp_misc.ml
+index cd73c2a..46e2f09 100644
+--- a/jc/jc_interp_misc.ml
++++ b/jc/jc_interp_misc.ml
+@@ -217,6 +217,7 @@ let make_label_counter prefix =
+ 
+ let fresh_loop_label = make_label_counter "loop_"
+ let fresh_reinterpret_label = make_label_counter "l__before_reinterpret_"
++let fresh_statement_label = make_label_counter "l__before_statement_"
+ 
+ (******************************************************************************)
+ (*                                   types                                    *)
+diff --git a/jc/jc_interp_misc.mli b/jc/jc_interp_misc.mli
+index bf50316..c8b9b59 100644
+--- a/jc/jc_interp_misc.mli
++++ b/jc/jc_interp_misc.mli
+@@ -67,6 +67,8 @@ val fresh_loop_label : unit -> label_info
+ 
+ val fresh_reinterpret_label : unit -> label_info
+ 
++val fresh_statement_label : unit -> label_info
++
+ (** {1 helpers for Output module} *)
+ 
+ val make_subtag : term -> term -> assertion
+diff --git a/jc/jc_why_output_misc.ml b/jc/jc_why_output_misc.ml
+index adaacff..842b2db 100644
+--- a/jc/jc_why_output_misc.ml
++++ b/jc/jc_why_output_misc.ml
+@@ -406,7 +406,10 @@ let make_block labels l =
+     but also to remove unneeded block
+ 
+     The principle is to push e2 inside e1 such that every labels visible for
+-    the last instruction (not a block) of e1 can be visible for e2 *)
++    the last instruction (not a block) of e1 can be visible for e2
++
++    This function should actually be called PREPEND (or CONS).
++*)
+ let rec append' e1 e2 =
+   match e1.expr_node, e2.expr_node with
+   | Void, _ ->  [e2]
