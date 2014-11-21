@@ -38,6 +38,7 @@ src_prepare() {
 	$(use compat) && epatch ${FILESDIR}/2.34_p2/ocaml-4-backward-compatibility.patch
 	epatch ${FILESDIR}/2.34_p2/new-bw-ax.patch
 	epatch ${FILESDIR}/2.34_p2/order-fix.patch
+	epatch ${FILESDIR}/2.34_p2/diverges_clause.patch
 
 	sed \
 		-e "s/DESTDIR =.*//g" \
