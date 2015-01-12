@@ -13,7 +13,7 @@ SRC_URI="http://alt-ergo.ocamlpro.com/download_manager.php?target=${P}.tar.gz"
 LICENSE="CeCILL-C"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"
-IUSE="+ocamlopt gtk"
+IUSE="+ocamlopt gtk satml"
 
 DEPEND="
 	>=dev-lang/ocaml-3.12.1[ocamlopt?]
@@ -29,9 +29,11 @@ RDEPEND="${DEPEND}"
 src_compile(){
 	emake
 	use gtk && emake gui
+	use satml && emake satML
 }
 
 src_install() {
 	emake DESTDIR="${D}" install
 	use gtk && emake DESTDIR="${D}" install-gui
+	use satml && emake DESTDIR="${D}" install-satML
 }
