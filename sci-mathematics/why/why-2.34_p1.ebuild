@@ -10,8 +10,8 @@ inherit autotools-utils eutils git-r3
 
 DESCRIPTION="Software verification platform"
 HOMEPAGE="http://why.lri.fr/"
-EGIT_REPO_URI="http://public:test@sed.ispras.ru/git/why2p"
-EGIT_BRANCH="Neon-patched"
+EGIT_REPO_URI="http://forge.ispras.ru/git/astraver.jessie2"
+EGIT_BRANCH="alpha0"
 EGIT_COMMIT="4217804c12cc3fac5ae920367c7e5181e54ed372"
 EGIT_MIN_CLONE_TYPE=single
 

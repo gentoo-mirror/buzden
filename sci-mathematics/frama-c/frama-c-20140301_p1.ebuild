@@ -8,7 +8,7 @@ inherit autotools eutils git-r3
 
 DESCRIPTION="Framework for analysis of source codes written in C"
 HOMEPAGE="http://frama-c.com"
-EGIT_REPO_URI="http://public:test@sed.ispras.ru/git/frama-pc"
+EGIT_REPO_URI="https://forge.ispras.ru/git/astraver.frama-c"
 EGIT_BRANCH="20140301"
 EGIT_COMMIT="e97de9801e1d95ddab0675132a06f8b3fbabb0e7"
 EGIT_MIN_CLONE_TYPE=single
