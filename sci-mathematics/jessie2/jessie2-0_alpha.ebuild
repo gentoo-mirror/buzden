@@ -18,11 +18,10 @@ EGIT_MIN_CLONE_TYPE=single
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="amd64 x86"
-IUSE="apron ocamlopt"
+IUSE="ocamlopt"
 
 RDEPEND="
 	>=dev-lang/ocaml-4.02[ocamlopt?]
-	apron? ( sci-mathematics/apron[ocaml] )
 	=sci-mathematics/frama-c-20140301_p2[ocamlopt?]
 	>=sci-mathematics/why3-0.85_p2"
 DEPEND="${RDEPEND}
