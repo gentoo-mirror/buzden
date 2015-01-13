@@ -23,7 +23,8 @@ IUSE="apron ocamlopt"
 RDEPEND="
 	>=dev-lang/ocaml-4.02[ocamlopt?]
 	apron? ( sci-mathematics/apron[ocaml] )
-	=sci-mathematics/frama-c-20140301_p2[ocamlopt?]"
+	=sci-mathematics/frama-c-20140301_p2[ocamlopt?]
+	>=sci-mathematics/why3-0.85_p2"
 DEPEND="${RDEPEND}
        >=dev-vcs/git-1.8"
 
