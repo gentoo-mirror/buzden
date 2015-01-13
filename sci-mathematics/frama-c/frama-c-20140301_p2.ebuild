@@ -19,14 +19,11 @@ KEYWORDS="amd64 x86"
 IUSE="doc gtk +ocamlopt"
 RESTRICT="strip"
 
-RDEPEND=">=dev-lang/ocaml-4[ocamlopt?]
+RDEPEND=">=dev-lang/ocaml-4.02[ocamlopt?]
+		dev-ml/camlp4[ocamlopt?]
 		>=dev-ml/ocamlgraph-1.8.5[ocamlopt?]
-		dev-ml/zarith
-		sci-mathematics/ltl2ba
-		sci-mathematics/alt-ergo
-		gtk? ( >=x11-libs/gtksourceview-2.8
-			>=gnome-base/libgnomecanvas-2.26
-			>=dev-ml/lablgtk-2.14[sourceview,gnomecanvas,ocamlopt?] )"
+		dev-ml/zarith[ocamlopt?]
+		gtk? ( >=dev-ml/lablgtk-2.14[sourceview,gnomecanvas,ocamlopt?] )"
 DEPEND="${RDEPEND}
         >=dev-vcs/git-1.8"
 
