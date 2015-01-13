@@ -18,7 +18,7 @@ EGIT_MIN_CLONE_TYPE=single
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="amd64 x86"
-IUSE="ocamlopt"
+IUSE="+ocamlopt"
 
 RDEPEND="
 	>=dev-lang/ocaml-4.02[ocamlopt?]
