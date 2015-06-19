@@ -1,0 +1,112 @@
+diff --git a/Makefile.in b/Makefile.in
+index dd50e8e..7d2fe59 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -64,8 +64,8 @@ OCAMLVERSION = @OCAMLVERSION@
+ CAMLP4   = @CAMLP4O@
+ 
+ INCLUDES = -I src -I jc
+-BFLAGS   = -w Z -warn-error A -dtypes -bin-annot -short-paths -strict-formats -safe-string -no-alias-deps -g $(INCLUDES) @INCLUDEGTK2@ -I +threads @OCAMLGRAPHLIB@
+-OFLAGS   = -w Z -warn-error A -dtypes -bin-annot -short-paths -strict-formats -safe-string -no-alias-deps $(INCLUDES) @INCLUDEGTK2@ -I +threads @OCAMLGRAPHLIB@
++BFLAGS   = -w Z -warn-error A -dtypes -bin-annot -short-paths -g $(INCLUDES) @INCLUDEGTK2@ -I +threads @OCAMLGRAPHLIB@
++OFLAGS   = -w Z -warn-error A -dtypes -bin-annot -short-paths $(INCLUDES) @INCLUDEGTK2@ -I +threads @OCAMLGRAPHLIB@
+ 
+ LCFLAGS = -L/usr/lib -L/usr/local/lib/ocaml
+ 
+@@ -158,7 +158,7 @@ WHYLIBS=lib/why/bool.why lib/why/integer.why lib/why/divisions.why \
+ PRELUDE=lib/why/prelude.why $(WHYLIBS)
+ 
+ # why
+-CMO_EXPORT =  src/lib.cmo src/rc.cmo src/loc.cmo \
++CMO_EXPORT = jc/bytes.cmo src/lib.cmo src/rc.cmo src/loc.cmo \
+ 	   src/ident.cmo src/print_real.cmo  \
+ 	   src/effect.cmo src/pp.cmo src/option_misc.cmo \
+ 	   src/parser.cmo src/lexer.cmo src/report.cmo \
+diff --git a/frama-c-plugin/Makefile b/frama-c-plugin/Makefile
+index 40d6b8c..97039dc 100644
+--- a/frama-c-plugin/Makefile
++++ b/frama-c-plugin/Makefile
+@@ -41,11 +41,11 @@ JCCMO		?= $(WHY_DISTRIB)/jc/jc.cmo
+ JCCMX		?= $(JCCMO:.cmo=.cmx)
+ 
+ PLUGIN_NAME:=Jessie
+-PLUGIN_CMO:= jessie_config jessie_options jessie_integer common extractor rewrite \
++PLUGIN_CMO:= bytes jessie_config jessie_options jessie_integer common extractor rewrite \
+              retype norm interp register
+ PLUGIN_HAS_MLI:=yes
+-PLUGIN_BFLAGS:=$(JESSIE_INCLUDES) -w -48 -safe-string -short-paths -strict-formats -no-alias-deps
+-PLUGIN_OFLAGS:=$(JESSIE_INCLUDES) -w -48 -safe-string -short-paths -strict-formats -no-alias-deps
++PLUGIN_BFLAGS:=$(JESSIE_INCLUDES) -w -48 -short-paths
++PLUGIN_OFLAGS:=$(JESSIE_INCLUDES) -w -48 -short-paths
+ PLUGIN_EXTRA_BYTE+=$(JCCMO)
+ PLUGIN_EXTRA_OPT+=$(JCCMX)
+ #PLUGIN_DEPFLAGS:=$(JESSIE_INCLUDES)
+diff --git a/frama-c-plugin/bytes.ml b/frama-c-plugin/bytes.ml
+new file mode 100644
+index 0000000..c2d037c
+--- /dev/null
++++ b/frama-c-plugin/bytes.ml
+@@ -0,0 +1,8 @@
++include String
++
++let sub_string = sub
++let empty = ""
++let of_string x = String.copy x
++let to_string x = String.copy x
++external unsafe_to_string : t -> string = "%identity"
++external unsafe_of_string : string -> t = "%identity"
+diff --git a/frama-c-plugin/bytes.mli b/frama-c-plugin/bytes.mli
+new file mode 100644
+index 0000000..033eafa
+--- /dev/null
++++ b/frama-c-plugin/bytes.mli
+@@ -0,0 +1,8 @@
++include module type of String
++
++val empty : t
++val of_string : string -> t
++val to_string : t -> string
++val sub_string : t -> int -> int -> string
++external unsafe_to_string : t -> string = "%identity"
++external unsafe_of_string : string -> t = "%identity"
+diff --git a/jc/bytes.ml b/jc/bytes.ml
+new file mode 100644
+index 0000000..c2d037c
+--- /dev/null
++++ b/jc/bytes.ml
+@@ -0,0 +1,8 @@
++include String
++
++let sub_string = sub
++let empty = ""
++let of_string x = String.copy x
++let to_string x = String.copy x
++external unsafe_to_string : t -> string = "%identity"
++external unsafe_of_string : string -> t = "%identity"
+diff --git a/jc/bytes.mli b/jc/bytes.mli
+new file mode 100644
+index 0000000..033eafa
+--- /dev/null
++++ b/jc/bytes.mli
+@@ -0,0 +1,8 @@
++include module type of String
++
++val empty : t
++val of_string : string -> t
++val to_string : t -> string
++val sub_string : t -> int -> int -> string
++external unsafe_to_string : t -> string = "%identity"
++external unsafe_of_string : string -> t = "%identity"
+diff --git a/src/lib.ml b/src/lib.ml
+index d5f0834..868555d 100644
+--- a/src/lib.ml
++++ b/src/lib.ml
+@@ -72,7 +72,7 @@ let channel_contents_buf cin =
+   and buff = Bytes.make 1024 ' ' in
+   let n = ref 0 in
+   while n := input cin buff 0 1024; !n <> 0 do
+-    Buffer.add_subbytes buf buff 0 !n
++    Buffer.add_substring buf buff 0 !n
+   done;
+   buf
+ 

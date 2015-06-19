@@ -1,0 +1,79 @@
+diff --git a/java/java_interp.ml b/java/java_interp.ml
+index 894c710..51cb1f1 100644
+--- a/java/java_interp.ml
++++ b/java/java_interp.ml
+@@ -965,9 +965,15 @@ let array_types decls =
+            (mkif
+               ~condition: result_var
+               ~expr_then:
+-              (mkbinary ~op:`Bge
+-                 ~expr1: (mkoffset_max ~expr:vie ())
+-                 ~expr2: (mkint ~value:(-1) ())
++              (mkand
++                 ~expr1: (mkbinary ~op:`Ble
++                     ~expr1: (mkoffset_min ~expr:vie ())
++                     ~expr2: (mkint ~value:(0) ())
++                     ())
++                 ~expr2: (mkbinary ~op:`Bge
++                     ~expr1: (mkoffset_max ~expr:vie ())
++                     ~expr2: (mkint ~value:(-1) ())
++                     ())
+                  ())
+               ~expr_else: (mkeq ~expr1:vie ~expr2:(mknull ()) ())
+               ())
+@@ -994,11 +1000,16 @@ let array_types decls =
+           ~labels: [Jc_env.LabelHere]
+ 	  ~params: largs
+           ~body:
+-          (mkbinary
+-             ~expr1: (mkoffset_max ~expr:vie ())
+-             ~op:`Bge
+-             ~expr2: (mkint ~value:(-1) ())
+-             ())
++             (mkand
++                ~expr1: (mkbinary ~op:`Ble
++                         ~expr1: (mkoffset_min ~expr:vie ())
++                         ~expr2: (mkint ~value:(0) ())
++                        ())
++                ~expr2: (mkbinary ~op:`Bge
++                         ~expr1: (mkoffset_max ~expr:vie ())
++                         ~expr2: (mkint ~value:(-1) ())
++                        ())
++                ())
+           ()) :: acc0,
+        (mktag_def
+           ~name:st.jc_struct_info_name
+@@ -2071,13 +2082,16 @@ let tr_non_null_logic_fun () =
+     (JCTpointer (JCtag(si, []), Some num_zero, None)) "x" in
+   let vit = mkvar ~name:(var_name vi) () in
+   let offset_maxt = mkoffset_max ~expr:vit () in
++  let offset_mint = mkoffset_min ~expr:vit () in
+   let offset_maxa = mkbinary ~op:`Bge ~expr1:offset_maxt ~expr2:zero () in
++  let offset_mina = mkbinary ~op:`Ble ~expr1:offset_mint ~expr2:zero () in
++  let offset_a = mkand ~expr1:offset_mina ~expr2:offset_maxa () in
+   let non_null_pred = create_non_null_pred si in
+   mklogic_def
+     ~name: non_null_pred.jc_logic_info_name
+     ~labels: [Jc_env.LabelHere]
+     ~params: [ptype_of_type vi.jc_var_info_type, var_name vi]
+-    ~body: offset_maxa
++    ~body: offset_a
+     ()
+ 
+ let tr_logic_fun fi (b : logic_decl_body) acc =
+diff --git a/jc/jc_constructors.mli b/jc/jc_constructors.mli
+index eb948fc..38aeacc 100644
+--- a/jc/jc_constructors.mli
++++ b/jc/jc_constructors.mli
+@@ -406,9 +406,10 @@ module PExpr :
+     val mkoffset :
+       kind:offset_kind ->
+       expr:pexpr -> ?pos:Loc.position -> unit -> pexpr
++*)
++
+     val mkoffset_min :
+       expr:pexpr -> ?pos:Loc.position -> unit -> pexpr
+-*)
+ 
+     val mkoffset_max :
+       expr:pexpr -> ?pos:Loc.position -> unit -> pexpr

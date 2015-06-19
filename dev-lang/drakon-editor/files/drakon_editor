@@ -1,0 +1,6 @@
+#!/bin/sh
+
+D=$(dirname "$0")
+B=$(basename "$0")
+
+cd "$D/../drakon-editor" && ./"$B.tcl"
