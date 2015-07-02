@@ -4,33 +4,30 @@
 
 EAPI="3"
 
-inherit autotools eutils
+inherit autotools eutils git-r3
 
 DESCRIPTION="Framework for analysis of source codes written in C"
 HOMEPAGE="http://frama-c.com"
-NAME="Fluorine"
-SRC_URI="http://frama-c.com/download/${PN/-c/-c-$NAME}-${PV/_/-}.tar.gz"
+EGIT_REPO_URI="https://forge.ispras.ru/git/astraver.frama-c"
+EGIT_BRANCH="new_integers"
+EGIT_COMMIT="62e07f3eaff8eb4bcafc7a3da91433380193a3fc"
+EGIT_MIN_CLONE_TYPE=single
 
 LICENSE="LGPL-2"
 SLOT="0"
-KEYWORDS="~amd64 ~ppc ~x86"
+KEYWORDS="amd64 x86"
 IUSE="doc gtk +ocamlopt"
 RESTRICT="strip"
 
-DEPEND=">=dev-lang/ocaml-3.12.1[ocamlopt?]
-		=dev-ml/ocamlgraph-1.8.3[gtk?,ocamlopt?]
-		dev-ml/zarith
-		sci-mathematics/ltl2ba
-		sci-mathematics/alt-ergo
-		gtk? ( >=x11-libs/gtksourceview-2.8
-			>=gnome-base/libgnomecanvas-2.26
-			>=dev-ml/lablgtk-2.14[sourceview,gnomecanvas,ocamlopt?] )"
-RDEPEND="${DEPEND}"
-
-S="${WORKDIR}/${PN/-c/-c-$NAME}-${PV/_/-}"
+RDEPEND=">=dev-lang/ocaml-4.02[ocamlopt?]
+		dev-ml/camlp4[ocamlopt?]
+		>=dev-ml/ocamlgraph-1.8.5[ocamlopt?]
+		dev-ml/zarith[ocamlopt?]
+		gtk? ( >=dev-ml/lablgtk-2.14[sourceview,gnomecanvas,ocamlopt?] )"
+DEPEND="${RDEPEND}
+        >=dev-vcs/git-1.8"
 
 src_prepare(){
-	rm share/libc/test.c
 	touch config_file
 
 	eautoreconf

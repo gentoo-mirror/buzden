@@ -8,7 +8,7 @@ AUTOTOOLS_AUTORECONF=true
 
 inherit autotools-utils eutils git-r3
 
-DESCRIPTION="Software verification platform"
+DESCRIPTION="Obsolete software verification platform (use jessie2 instead)"
 HOMEPAGE="http://why.lri.fr/"
 EGIT_REPO_URI="http://forge.ispras.ru/git/astraver.jessie2"
 EGIT_BRANCH="alpha0"
@@ -35,6 +35,8 @@ MAKEOPTS+=" -j1"
 AUTOTOOLS_IN_SOURCE_BUILD=1
 
 src_prepare() {
+	ewarn sci-mathematics/why is an obsolete package replaced by sci-mathematics/jessie2.
+
 	$(use compat) && epatch ${FILESDIR}/2.34_p2/ocaml-4-backward-compatibility.patch
 	epatch ${FILESDIR}/2.34_p2/new-bw-ax.patch
 	epatch ${FILESDIR}/2.34_p2/order-fix.patch

@@ -10,21 +10,24 @@ DESCRIPTION="Why is a software verification platform."
 HOMEPAGE="http://why3.lri.fr/"
 EGIT_REPO_URI="http://forge.ispras.ru/git/astraver.why3"
 EGIT_BRANCH="patched"
-EGIT_COMMIT="a97fa48d541d0321284732b5b2bce9bf1176afba"
+EGIT_COMMIT="e8ab84573999f1b51a7d11e4cc30314642ad6523"
 EGIT_MIN_CLONE_TYPE=single
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~amd64 ~x86"
-IUSE="+why2 ide pvs coq hypothesis doc jessie3"
+KEYWORDS="amd64 x86"
+IUSE="ide lib pvs coq isabelle hypothesis doc jessie3 comp-sess +ocamlopt"
 
-RDEPEND=">=dev-lang/ocaml-4
-		>=dev-ml/ocamlgraph-1.2
-		dev-ml/menhir
-		ide? ( >=dev-ml/lablgtk-2.14[sourceview] )
+RDEPEND=">=dev-lang/ocaml-4.02[ocamlopt?]
+		>=dev-ml/ocamlgraph-1.8.2[ocamlopt?]
+		dev-ml/menhir[ocamlopt?]
+		dev-ml/zarith[ocamlopt?]
+		comp-sess? ( dev-ml/camlzip[ocamlopt?] )
+		ide? ( >=dev-ml/lablgtk-2.14.2[sourceview,ocamlopt?] )
 		pvs? ( >=sci-mathematics/pvs-5.0 )
-		coq? ( sci-mathematics/coq )
-		jessie3? ( >=sci-mathematics/frama-c-20140301 )"
+		coq? ( >=sci-mathematics/coq-8.4[ocamlopt?] )
+		isabelle? ( sci-mathematics/isabelle )
+		jessie3? ( >=sci-mathematics/frama-c-20150201[ocamlopt?] )"
 DEPEND="${RDEPEND}
         >=dev-vcs/git-1.8"
 
@@ -40,6 +43,12 @@ src_configure() {
 		$(use_enable pvs pvs-libs)\
 		$(use_enable coq coq-libs)\
 		$(use_enable coq coq-tactic)\
+		$(use_enable isabelle isabelle-libs)\
 		$(use_enable hypothesis hypothesis-selection)\
 		$(use_enable doc)
+}
+
+src_install() {
+	emake install DESTDIR="${D}"
+	use lib && emake install-lib DESTDIR="${D}"
 }
