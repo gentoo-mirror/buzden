@@ -14,27 +14,30 @@ EGIT_COMMIT="master"
 LICENSE="BSD MIT HPND"
 SLOT="0/${PV}"
 KEYWORDS=""
-IUSE="compat glpk"
+IUSE="+cln compat glpk"
 
-# todo to add a useflags and dependencies for GMP and CLN; they should be alternate
+RDEPEND=">=dev-libs/antlr-c-3.2
+	dev-libs/boost:=
+	>=dev-libs/gmp-4.2:=
+	compat? ( !sci-mathematics/cvc3 )
+	glpk? ( sci-mathematics/glpk )
+"
+DEPEND="${RDEPEND}
+	dev-java/antlr:3
+	app-shells/bash
+	sys-devel/gcc[cxx]
+"
 
-RDEPEND=">=dev-libs/gmp-4.2
-		dev-libs/boost
-		>=dev-libs/antlr-c-3.2
-		compat? (
-			!sci-mathematics/cvc3
-		)
-		glpk? (
-			sci-mathematics/glpk
-		)
-		app-shells/bash
-		sys-devel/gcc[cxx]
-		"
-DEPEND="${RDEPEND}"
+src_prepare() {
+	# generate ./configure and friends
+	./autogen.sh
+}
 
 src_configure() {
 	econf \
 		--disable-assertions \
 		$(use_with compat) \
+		--with-$(usex cln cln gmp) \
+		$(use_enable cln gpl) \
 		$(use_with glpk)
 }

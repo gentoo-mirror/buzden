@@ -4,7 +4,7 @@
 
 EAPI="5"
 
-inherit elisp-common
+inherit autotools eutils elisp-common
 
 DESCRIPTION="CVC4 is an efficient open-source automatic theorem prover for Satisfiability Modulo Theories (SMT) problems"
 HOMEPAGE="http://cvc4.cs.nyu.edu/web"
@@ -13,27 +13,29 @@ SRC_URI="http://cvc4.cs.nyu.edu/builds/src/${P}.tar.gz"
 LICENSE="BSD MIT HPND"
 SLOT="0/${PV}"
 KEYWORDS="~amd64 ~x86"
-IUSE="compat glpk"
+IUSE="+cln compat glpk"
 
-# todo to add a useflags and dependencies for GMP and CLN; they should be alternate
+RDEPEND=">=dev-libs/antlr-c-3.2
+	dev-libs/boost:=
+	>=dev-libs/gmp-4.2:=
+	compat? ( !sci-mathematics/cvc3 )
+	glpk? ( sci-mathematics/glpk )
+"
+DEPEND="${RDEPEND}
+	app-shells/bash
+	sys-devel/gcc[cxx]
+"
 
-RDEPEND=">=dev-libs/gmp-4.2
-		dev-libs/boost
-		>=dev-libs/antlr-c-3.2
-		compat? (
-			!sci-mathematics/cvc3
-		)
-		glpk? (
-			sci-mathematics/glpk
-		)
-		app-shells/bash
-		sys-devel/gcc[cxx]
-		"
-DEPEND="${RDEPEND}"
+src_prepare() {
+	epatch "${FILESDIR}"/${P}-gcc-5.patch
+	eautoreconf
+}
 
 src_configure() {
 	econf \
 		--disable-assertions \
 		$(use_with compat) \
+		--with-$(usex cln cln gmp) \
+		$(use_enable cln gpl) \
 		$(use_with glpk)
 }
