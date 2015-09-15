@@ -17,7 +17,8 @@ IUSE="+cln compat glpk"
 
 RDEPEND=">=dev-libs/antlr-c-3.2
 	dev-libs/boost:=
-	>=dev-libs/gmp-4.2:=
+	!cln? ( >=dev-libs/gmp-4.2:= )
+	cln? ( >=sci-libs/cln-1.3 )
 	compat? ( !sci-mathematics/cvc3 )
 	glpk? ( sci-mathematics/glpk )
 "
@@ -36,6 +37,6 @@ src_configure() {
 		--disable-assertions \
 		$(use_with compat) \
 		--with-$(usex cln cln gmp) \
-		$(use_enable cln gpl) \
+		$(usex cln --enable-gpl "") \
 		$(use_with glpk)
 }
