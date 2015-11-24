@@ -1,0 +1,13 @@
+DEFINED_PHASES=install
+DESCRIPTION=Dafny: a language and program verifier for functional correctness
+EAPI=3
+HOMEPAGE=http://research.microsoft.com/en-us/projects/dafny/
+KEYWORDS=amd64 x86
+LICENSE=Ms-PL
+RDEPEND=>=dev-lang/mono-2.8 >=sci-mathematics/z3-2.2 sys-apps/grep
+RESTRICT=fetch strip
+SLOT=0
+SRC_URI=dafny-2.2.31219.0706.zip
+_eclass_exported_funcs=src_install:-
+_eclasses_=eutils	f20548a2f7b0128068388cd2ec26708a	multilib	3972ca401cf7dbb430df9995f5d8d580	toolchain-funcs	7a212e5e01adfa4805c9978366e6ee85
+_md5_=76677028351d97133e2fe164ec6e5ec0
