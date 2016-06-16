@@ -12,7 +12,7 @@ DESCRIPTION="Software verification platform"
 HOMEPAGE="http://forge.ispras.ru/projects/astraver"
 EGIT_REPO_URI="https://forge.ispras.ru/git/astraver.jessie2"
 EGIT_BRANCH="alpha2"
-EGIT_COMMIT="97a9b1e47c65ca8f54c25d3172e6bfb2822a4ee8"
+EGIT_COMMIT="a20bd0c9ca0b561c1af6db58ccd9368d343558fb"
 EGIT_MIN_CLONE_TYPE=single
 
 LICENSE="GPL-2"
