@@ -8,5 +8,5 @@ LICENSE=BSD MIT HPND
 RDEPEND=>=dev-libs/antlr-c-3.2 dev-libs/boost:= >=dev-libs/gmp-4.2:= compat? ( !sci-mathematics/cvc3 ) glpk? ( sci-mathematics/glpk )
 SLOT=0/9999
 _eclass_exported_funcs=src_unpack:git-2 src_prepare:- src_configure:-
-_eclasses_=elisp-common	9f56c4e9bf1282dbfc2a5a09e1124e74	git-2	7af5d170bfc02983b4bcd3167dc5edd4
+_eclasses_=elisp-common	f49d14e575e158ccab82cf05b315a180	git-2	195a672bfaf52d868442171c9469bbb6
 _md5_=20766fbd968f0f354668034f244a434d
