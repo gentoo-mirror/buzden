@@ -1,3 +1,4 @@
+dev-java/sbt-bin 1.0.4: sbt, a build tool for Scala
 dev-lang/drakon-editor 1.23: DRAKON editor
 dev-ml/ocamlgraph 1.8.3 1.8.4 1.8.5: A graph library for Objective Caml
 dev-ml/zarith 1.2: The Zarith library implements arithmetic and logical operations over arbitrary-precision integers
