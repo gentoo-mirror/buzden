@@ -1,4 +1,4 @@
-DEFINED_PHASES=install
+DEFINED_PHASES=install nofetch
 DESCRIPTION=Dafny: a language and program verifier for functional correctness
 EAPI=3
 HOMEPAGE=http://research.microsoft.com/en-us/projects/dafny/
