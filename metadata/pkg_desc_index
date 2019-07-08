@@ -3,6 +3,5 @@ sci-mathematics/dafny 2.2.31219.0706 2.2.41003.0703: Dafny: a language and progr
 sci-mathematics/frama-c 20150201_p4: Framework for analysis of source codes written in C
 sci-mathematics/jessie2 0_alpha2_p6: Software verification platform
 sci-mathematics/key 2.0.0: The KeY Project -- Integrated Deductive Software Design.
-sci-mathematics/pvs 5.0: PVS - a theorem prover for formal specification and verification
 sci-mathematics/why3 0.87_p1: Why is a software verification platform.
 sci-mathematics/z3 4.3.2 4.4.0: An efficient theorem prover
