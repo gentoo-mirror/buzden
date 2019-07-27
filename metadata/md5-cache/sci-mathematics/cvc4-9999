@@ -5,7 +5,8 @@ EAPI=5
 HOMEPAGE=http://cvc4.cs.nyu.edu/web
 IUSE=+cln compat glpk
 LICENSE=BSD MIT HPND
+PROPERTIES=live
 RDEPEND=>=dev-libs/antlr-c-3.2 dev-libs/boost:= >=dev-libs/gmp-4.2:= compat? ( !sci-mathematics/cvc3 ) glpk? ( sci-mathematics/glpk )
 SLOT=0/9999
-_eclasses_=elisp-common	23f47b2e1de7abf387105eddd1318738	git-2	249c1a0962573f4ce2c28f0d5b6b35d4
+_eclasses_=elisp-common	23f47b2e1de7abf387105eddd1318738	git-2	3aabf18eba60687bbe6855eba271f688
 _md5_=20766fbd968f0f354668034f244a434d
