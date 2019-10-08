@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="project">
+		<email>haskell@gentoo.org</email>
+		<name>Gentoo Haskell</name>
+	</maintainer>
+	<use>
+		<flag name="ffi">Build support for libffi</flag>
+		<flag name="gmp">Use GMP for Integers</flag>
+		<flag name="release">This is an official release</flag>
+		<flag name="freestanding">Build an Idris that doesn't use cabal</flag>
+		<flag name="ci">Built everything using "-Werror", meant for CI-builds only</flag>
+		<flag name="execonly">Build executables only, skip the libraries and RTS</flag>
+	</use>
+	<longdescription>
+		Idris is a general purpose language with full dependent types.
+		It is compiled, with eager evaluation.
+		Dependent types allow types to be predicated on values,
+		meaning that some aspects of a program&#39;s behaviour can be
+		specified precisely in the type. The language is closely
+		related to Epigram and Agda. There is a tutorial at
+		&lt;http://www.idris-lang.org/documentation&gt;.
+		Features include:
+		
+		* Full, first class, dependent types with dependent pattern matching
+		
+		* where clauses, with rule, case expressions,
+		pattern matching let and lambda bindings
+		
+		* Interfaces (similar to type classes), monad comprehensions
+		
+		* do notation, idiom brackets, syntactic conveniences for lists,
+		tuples, dependent pairs
+		
+		* Totality checking
+		
+		* Coinductive types
+		
+		* Indentation significant syntax, extensible syntax
+		
+		* Cumulative universes
+		
+		* Simple foreign function interface (to C)
+		
+		* Hugs style interactive environment
+	</longdescription>
+</pkgmetadata>
