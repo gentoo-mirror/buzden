@@ -2,3 +2,14 @@
 # Please add your descriptions to your package's metadata.xml ONLY.
 # * generated automatically using pmaint *
 
+dev-haskell/stack:disable-git-info - Disable compile-time inclusion of current git info in stack
+dev-haskell/stack:hide-dependency-versions - Hides dependency versions from 'stack --version', used only by building Stack and the default 'stack.yaml'. Note to packagers/distributors: DO NOT OVERRIDE THIS FLAG IF YOU ARE BUILDING 'stack' ANY OTHER WAY (e.g. using cabal or from Hackage), as it makes debugging support requests more difficult.
+dev-haskell/stack:integration-tests - Run the integration test suite
+dev-haskell/stack:static - Pass -static/-pthread to ghc when linking the stack binary.
+dev-haskell/stack:supported-build - If false, causes 'stack --version' to issue a warning about the build being unsupported. Should be True only if building with Stack and the default 'stack.yaml'. Note to packagers/distributors: DO NOT OVERRIDE THIS FLAG IF YOU ARE BUILDING 'stack' ANY OTHER WAY (e.g. using cabal or from Hackage), as it makes debugging support requests more difficult.
+dev-lang/idris:ci - Built everything using "-Werror", meant for CI-builds only
+dev-lang/idris:execonly - Build executables only, skip the libraries and RTS
+dev-lang/idris:ffi - Build support for libffi
+dev-lang/idris:freestanding - Build an Idris that doesn't use cabal
+dev-lang/idris:gmp - Use GMP for Integers
+dev-lang/idris:release - This is an official release
