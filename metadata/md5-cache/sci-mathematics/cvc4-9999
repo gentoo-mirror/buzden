@@ -8,5 +8,5 @@ LICENSE=BSD MIT HPND
 PROPERTIES=live
 RDEPEND=>=dev-libs/antlr-c-3.2 dev-libs/boost:= >=dev-libs/gmp-4.2:= compat? ( !sci-mathematics/cvc3 ) glpk? ( sci-mathematics/glpk )
 SLOT=0/9999
-_eclasses_=elisp-common	d498a10aaed837c4ec5b31039e20b121	git-2	3aabf18eba60687bbe6855eba271f688
+_eclasses_=elisp-common	d498a10aaed837c4ec5b31039e20b121	git-2	ff0c6913068da64bb51417d8eceff36a
 _md5_=20766fbd968f0f354668034f244a434d
