@@ -33,10 +33,12 @@ src_configure() {
 	./configure \
 		--64 \
 		--machine=a6le \
+		--threads \
 		--installprefix=/usr \
 		--installlib=/usr/lib64 \
 		--installbin=/usr/bin \
 		--installman=/usr/share/man \
 		--temproot=${D}
 	# TODO to pass nice prefix, man and lib parameters
+	# TODO to make `threads` to be a USE-flag
 }
