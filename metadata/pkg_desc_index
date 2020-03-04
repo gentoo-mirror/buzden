@@ -1,6 +1,7 @@
 app-vim/idris-vim 9999: Idris mode for vim
 dev-lang/drakon-editor 1.23: DRAKON editor
 dev-python/pygments 2.4.2-r1 2.5.2-r1: Pygments is a syntax highlighting package written in Python
+dev-scheme/chezscheme 9.5.2: Chez Scheme programming language and implementation
 sci-mathematics/dafny 2.2.31219.0706 2.2.41003.0703: Dafny: a language and program verifier for functional correctness
 sci-mathematics/frama-c 20150201_p4: Framework for analysis of source codes written in C
 sci-mathematics/jessie2 0_alpha2_p6: Software verification platform
