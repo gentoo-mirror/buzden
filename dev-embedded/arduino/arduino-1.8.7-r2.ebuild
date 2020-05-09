@@ -99,6 +99,8 @@ src_install() {
 	sed -i -e 's@^compiler.path=.*@compiler.path=/usr/bin/@' -e 's@^tools.avrdude.path=.*@tools.avrdude.path=/usr@' \
 		-e 's@^tools.avrdude.config.path=.*@tools.avrdude.config.path=/etc/avrdude.conf@' hardware/arduino/avr/platform.txt || die
 
+	sed -i "s/\${version}/${PV}/g" lib/version.txt
+
 	java-pkg_dojar lib/*.jar
 	java-pkg_dolauncher ${PN} \
 		--pwd "/usr/share/${PN}" \
