@@ -13,14 +13,17 @@ SRC_URI="https://github.com/sudar/${MY_PN}/archive/${PV}.tar.gz"
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"
-IUSE="doc examples"
+IUSE="+monitor doc examples"
 
 COMMONDEP="
 dev-embedded/arduino
 dev-python/pyserial"
 
 RDEPEND="${COMMONDEP}
-dev-embedded/avrdude"
+dev-embedded/avrdude
+monitor? (
+	app-misc/screen
+)"
 
 DEPEND="${COMMONDEP}"
 
