@@ -1,0 +1,4254 @@
+diff --git a/.travis.yml b/.travis.yml
+index f97a4ea..630965a 100644
+--- a/.travis.yml
++++ b/.travis.yml
+@@ -1,3 +1,4 @@
++sudo: required
+ language: c
+ compiler:
+   - gcc
+diff --git a/Arduino.mk b/Arduino.mk
+index 0dfe161..ff94ffe 100644
+--- a/Arduino.mk
++++ b/Arduino.mk
+@@ -62,20 +62,23 @@
+ #   AVR_TOOLS_DIR = /usr
+ #
+ # On Windows declare this environmental variables using the windows
+-# configuration options. Control Panel > System > Advanced system settings
+-# Also take into account that when you set them you have to add '\' on
+-# all spaces and special characters.
+-# ARDUINO_DIR and AVR_TOOLS_DIR have to be relative and not absolute.
++# configuration options or Cygwin .bashrc. Control Panel > System > Advanced system settings
++# The paths must use Unix style forward slash and not have any spaces 
++# or escape charactors. One must use a symbolic link if the path does
++# contain spaces.
++#
+ # This are just examples, you have to adapt this variables accordingly to
+-# your system.
++# your system. Note the difference between ARDMK_DIR, which can use /cygdrive/
++# and USER_LIB_PATH, which cannnot due to invoking with the build tools.
++# It is best practice to avoid cygdrive all together.
+ #
+-#   ARDUINO_DIR   =../../../../../Arduino
+-#   AVR_TOOLS_DIR =../../../../../Arduino/hardware/tools/avr
++#   ARDUINO_DIR   = C:/Arduino
++#   AVR_TOOLS_DIR = C:/Arduino/hardware/tools/avr
+ #   ARDMK_DIR     = /cygdrive/c/Users/"YourUser"/Arduino-Makefile
+ #
+ # On Windows it is highly recommended that you create a symbolic link directory
+ # for avoiding using the normal directories name of windows such as
+-# c:\Program Files (x86)\Arduino
++# C:\Program Files (x86)\Arduino
+ # For this use the command mklink on the console.
+ #
+ #
+@@ -238,6 +241,9 @@ arduino_output =
+ # running for the first time (i.e., not after a restart after
+ # regenerating the dependency file), then output the configuration.
+ ifndef ARDUINO_QUIET
++    ARDUINO_QUIET = 0
++endif
++ifeq ($(ARDUINO_QUIET),0)
+     ifeq ($(MAKE_RESTARTS),)
+         ifeq ($(MAKELEVEL),0)
+             arduino_output = $(info $(1))
+@@ -258,7 +264,9 @@ else
+ endif
+ 
+ # include Common.mk now we know where it is
+-include $(ARDMK_DIR)/Common.mk
++ifndef COMMON_INCLUDED
++    include $(ARDMK_DIR)/Common.mk
++endif
+ 
+ # show_config_variable macro is available now. So let's print config details for ARDMK_DIR
+ ifndef ARDMK_DIR_MSG
+@@ -314,18 +322,19 @@ else
+     ifeq ($(ARCHITECTURE),avr)
+         ARDUINO_ARCH_FLAG = -DARDUINO_ARCH_AVR
+     else
+-        ifeq ($(ARCHITECTURE),sam)
+-            ARDUINO_ARCH_FLAG = -DARDUINO_ARCH_SAM
+-        else
+-            ARDUINO_ARCH_FLAG = -DARDUINO_ARCH_$(shell echo $(ARCHITECTURE) | tr '[:lower:]' '[:upper:]')
+-        endif
++        ARDUINO_ARCH_FLAG = -DARDUINO_ARCH_$(shell echo $(ARCHITECTURE) | tr '[:lower:]' '[:upper:]')
+     endif
+ endif
+ 
+ ########################################################################
+ # 1.5.x vendor - defaults to arduino
+ ifndef ARDMK_VENDOR
+-	ARDMK_VENDOR = arduino
++    ARCH_LINUX := $(shell grep "Arch Linux" /etc/os-release 2>/dev/null)
++    ifdef ARCH_LINUX
++        ARDMK_VENDOR = archlinux-arduino
++    else
++        ARDMK_VENDOR = arduino
++    endif
+     $(call show_config_variable,ARDMK_VENDOR,[DEFAULT])
+ else
+     $(call show_config_variable,ARDMK_VENDOR,[USER])
+@@ -364,9 +373,15 @@ ifndef ARDUINO_SKETCHBOOK
+     ifneq ($(ARDUINO_SKETCHBOOK),)
+         $(call show_config_variable,ARDUINO_SKETCHBOOK,[AUTODETECTED],(from arduino preferences file))
+     else
+-        ARDUINO_SKETCHBOOK := $(firstword \
+-            $(call dir_if_exists,$(HOME)/sketchbook) \
+-            $(call dir_if_exists,$(HOME)/Documents/Arduino) )
++        ifeq ($(CURRENT_OS), WINDOWS)
++            ARDUINO_SKETCHBOOK := $(firstword \
++            $(call dir_if_exists,$(USERPROFILE)/sketchbook) \
++            $(call dir_if_exists,$(USERPROFILE)/Documents/Arduino) )
++        else
++            ARDUINO_SKETCHBOOK := $(firstword \
++              $(call dir_if_exists,$(HOME)/sketchbook) \
++              $(call dir_if_exists,$(HOME)/Documents/Arduino) )
++        endif
+         $(call show_config_variable,ARDUINO_SKETCHBOOK,[DEFAULT])
+     endif
+ else
+@@ -376,28 +391,129 @@ endif
+ ########################################################################
+ # Arduino and system paths
+ 
++# Third party hardware and core like ATtiny or ATmega 16
++ifdef ALTERNATE_CORE
++    $(call show_config_variable,ALTERNATE_CORE,[USER])
++
++    ifndef ALTERNATE_CORE_PATH
++        ALTERNATE_CORE_PATH = $(ARDUINO_SKETCHBOOK)/hardware/$(ALTERNATE_CORE)/$(ARCHITECTURE)
++    endif
++endif
++
++ifdef ALTERNATE_CORE_PATH
++
++    ifdef ALTERNATE_CORE
++        $(call show_config_variable,ALTERNATE_CORE_PATH,[COMPUTED], (from ARDUINO_SKETCHBOOK and ALTERNATE_CORE))
++    else
++        $(call show_config_variable,ALTERNATE_CORE_PATH,[USER])
++    endif
++
++    ifndef ARDUINO_VAR_PATH
++        ARDUINO_VAR_PATH  = $(ALTERNATE_CORE_PATH)/variants
++        $(call show_config_variable,ARDUINO_VAR_PATH,[COMPUTED],(from ALTERNATE_CORE_PATH))
++    endif
++
++    ifndef BOARDS_TXT
++        BOARDS_TXT  = $(ALTERNATE_CORE_PATH)/boards.txt
++        $(call show_config_variable,BOARDS_TXT,[COMPUTED],(from ALTERNATE_CORE_PATH))
++    endif
++
++else
++
++    ifndef ARDUINO_VAR_PATH
++        ARDUINO_VAR_PATH  = $(ARDUINO_DIR)/hardware/$(ARDMK_VENDOR)/$(ARCHITECTURE)/variants
++        $(call show_config_variable,ARDUINO_VAR_PATH,[COMPUTED],(from ARDUINO_DIR))
++    else
++        $(call show_config_variable,ARDUINO_VAR_PATH,[USER])
++    endif
++
++    ifndef BOARDS_TXT
++        BOARDS_TXT  = $(ARDUINO_DIR)/hardware/$(ARDMK_VENDOR)/$(ARCHITECTURE)/boards.txt
++        $(call show_config_variable,BOARDS_TXT,[COMPUTED],(from ARDUINO_DIR))
++    else
++        $(call show_config_variable,BOARDS_TXT,[USER])
++    endif
++
++endif
++
++ifeq (,$(wildcard $(BOARDS_TXT)))
++    $(error Currently BOARDS_TXT='$(BOARDS_TXT)', which is not an existing file or an invalid filename.)
++endif
++
++ifndef TOOL_PREFIX
++    TOOL_PREFIX = avr
++endif
++
+ ifndef CC_NAME
+-CC_NAME      = avr-gcc
++    CC_NAME := $(call PARSE_BOARD,$(BOARD_TAG),build.command.gcc)
++    ifndef CC_NAME
++        CC_NAME := $(TOOL_PREFIX)-gcc
++    else
++        $(call show_config_variable,CC_NAME,[COMPUTED])
++    endif
+ endif
+ 
+ ifndef CXX_NAME
+-CXX_NAME     = avr-g++
++    CXX_NAME := $(call PARSE_BOARD,$(BOARD_TAG),build.command.g++)
++    ifndef CXX_NAME
++        CXX_NAME := $(TOOL_PREFIX)-g++
++    else
++        $(call show_config_variable,CXX_NAME,[COMPUTED])
++    endif
++endif
++
++ifndef AS_NAME
++    AS_NAME := $(call PARSE_BOARD,$(BOARD_TAG),build.command.as)
++    ifndef AS_NAME
++        AS_NAME := $(TOOL_PREFIX)-as
++    else
++        $(call show_config_variable,AS_NAME,[COMPUTED])
++    endif
+ endif
+ 
+ ifndef OBJCOPY_NAME
+-OBJCOPY_NAME = avr-objcopy
++    OBJCOPY_NAME := $(call PARSE_BOARD,$(BOARD_TAG),build.command.objcopy)
++    ifndef OBJCOPY_NAME
++        OBJCOPY_NAME := $(TOOL_PREFIX)-objcopy
++    else
++        $(call show_config_variable,OBJCOPY_NAME,[COMPUTED])
++    endif
+ endif
+ 
+ ifndef OBJDUMP_NAME
+-OBJDUMP_NAME = avr-objdump
++    OBJDUMP_NAME := $(call PARSE_BOARD,$(BOARD_TAG),build.command.objdump)
++    ifndef OBJDUMP_NAME
++        OBJDUMP_NAME := $(TOOL_PREFIX)-objdump
++    else
++        $(call show_config_variable,OBJDUMP_NAME,[COMPUTED])
++    endif
++endif
++
++ifndef AR_NAME
++    AR_NAME := $(call PARSE_BOARD,$(BOARD_TAG),build.command.ar)
++    ifndef AR_NAME
++        AR_NAME := $(TOOL_PREFIX)-ar
++    else
++        $(call show_config_variable,AR_NAME,[COMPUTED])
++    endif
+ endif
+ 
+ ifndef SIZE_NAME
+-SIZE_NAME    = avr-size
++    SIZE_NAME := $(call PARSE_BOARD,$(BOARD_TAG),build.command.size)
++    ifndef SIZE_NAME
++        SIZE_NAME := $(TOOL_PREFIX)-size
++    else
++        $(call show_config_variable,SIZE_NAME,[COMPUTED])
++    endif
+ endif
+ 
+ ifndef NM_NAME
+-NM_NAME      = avr-nm
++    NM_NAME := $(call PARSE_BOARD,$(BOARD_TAG),build.command.nm)
++    ifndef NM_NAME
++        NM_NAME := $(TOOL_PREFIX)-nm
++    else
++        $(call show_config_variable,NM_NAME,[COMPUTED])
++    endif
+ endif
+ 
+ ifndef AVR_TOOLS_DIR
+@@ -445,7 +561,14 @@ ifndef AVR_TOOLS_DIR
+             AVR_TOOLS_DIR = $(SYSTEMPATH_AVR_TOOLS_DIR)
+             $(call show_config_variable,AVR_TOOLS_DIR,[AUTODETECTED],(found in $$PATH))
+         else
+-            echo $(error No AVR tools directory found)
++            # One last attempt using $(TOOL_PREFIX)-gcc in case using arm
++            SYSTEMPATH_AVR_TOOLS_DIR := $(call dir_if_exists,$(abspath $(dir $(shell which $($(TOOL_PREFIX)-gcc)))/..))
++            ifdef SYSTEMPATH_AVR_TOOLS_DIR
++                AVR_TOOLS_DIR = $(SYSTEMPATH_AVR_TOOLS_DIR)
++                $(call show_config_variable,AVR_TOOLS_DIR,[AUTODETECTED],(found in $$PATH))
++            else
++                echo $(error No AVR tools directory found)
++            endif
+         endif # SYSTEMPATH_AVR_TOOLS_DIR
+ 
+     endif # BUNDLED_AVR_TOOLS_DIR
+@@ -464,8 +587,8 @@ else
+ 
+ endif #ndef AVR_TOOLS_DIR
+ 
+-ifndef AVR_TOOLS_PATH
+-    AVR_TOOLS_PATH    = $(AVR_TOOLS_DIR)/bin
++ifndef TOOLS_PATH
++    TOOLS_PATH    = $(AVR_TOOLS_DIR)/bin
+ endif
+ 
+ ifndef ARDUINO_LIB_PATH
+@@ -486,51 +609,6 @@ else
+     $(call show_config_variable,ARDUINO_PLATFORM_LIB_PATH,[USER])
+ endif
+ 
+-# Third party hardware and core like ATtiny or ATmega 16
+-ifdef ALTERNATE_CORE
+-    $(call show_config_variable,ALTERNATE_CORE,[USER])
+-
+-    ifndef ALTERNATE_CORE_PATH
+-        ALTERNATE_CORE_PATH = $(ARDUINO_SKETCHBOOK)/hardware/$(ALTERNATE_CORE)/$(ARCHITECTURE)
+-    endif
+-endif
+-
+-ifdef ALTERNATE_CORE_PATH
+-
+-    ifdef ALTERNATE_CORE
+-        $(call show_config_variable,ALTERNATE_CORE_PATH,[COMPUTED], (from ARDUINO_SKETCHBOOK and ALTERNATE_CORE))
+-    else
+-        $(call show_config_variable,ALTERNATE_CORE_PATH,[USER])
+-    endif
+-
+-    ifndef ARDUINO_VAR_PATH
+-        ARDUINO_VAR_PATH  = $(ALTERNATE_CORE_PATH)/variants
+-        $(call show_config_variable,ARDUINO_VAR_PATH,[COMPUTED],(from ALTERNATE_CORE_PATH))
+-    endif
+-
+-    ifndef BOARDS_TXT
+-        BOARDS_TXT  = $(ALTERNATE_CORE_PATH)/boards.txt
+-        $(call show_config_variable,BOARDS_TXT,[COMPUTED],(from ALTERNATE_CORE_PATH))
+-    endif
+-
+-else
+-
+-    ifndef ARDUINO_VAR_PATH
+-        ARDUINO_VAR_PATH  = $(ARDUINO_DIR)/hardware/$(ARDMK_VENDOR)/$(ARCHITECTURE)/variants
+-        $(call show_config_variable,ARDUINO_VAR_PATH,[COMPUTED],(from ARDUINO_DIR))
+-    else
+-        $(call show_config_variable,ARDUINO_VAR_PATH,[USER])
+-    endif
+-
+-    ifndef BOARDS_TXT
+-        BOARDS_TXT  = $(ARDUINO_DIR)/hardware/$(ARDMK_VENDOR)/$(ARCHITECTURE)/boards.txt
+-        $(call show_config_variable,BOARDS_TXT,[COMPUTED],(from ARDUINO_DIR))
+-    else
+-        $(call show_config_variable,BOARDS_TXT,[USER])
+-    endif
+-
+-endif
+-
+ ########################################################################
+ # Miscellaneous
+ 
+@@ -566,9 +644,9 @@ else
+     $(call show_config_variable,BOARD_TAG,[USER])
+ endif
+ 
+-ifndef PARSE_BOARD
+-    # result = $(call READ_BOARD_TXT, 'boardname', 'parameter')
+-    PARSE_BOARD = $(shell grep -Ev '^\#' $(BOARDS_TXT) | grep -E "^[ \t]*$(1).$(2)=" | cut -d = -f 2 | cut -d : -f 2)
++ifdef BOARD_CLOCK
++    BOARD_CLOCK := $(strip $(BOARD_CLOCK))
++    $(call show_config_variable,BOARD_CLOCK,[USER])
+ endif
+ 
+ # If NO_CORE is set, then we don't have to parse boards.txt file
+@@ -616,7 +694,12 @@ ifeq ($(strip $(NO_CORE)),)
+     endif
+ 
+     ifndef F_CPU
+-        F_CPU := $(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).build.f_cpu)
++        ifdef BOARD_CLOCK
++            F_CPU := $(call PARSE_BOARD,$(BOARD_TAG),menu.(speed|clock).$(BOARD_CLOCK).build.f_cpu)
++        endif
++        ifndef F_CPU
++            F_CPU := $(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).build.f_cpu)
++        endif
+         ifndef F_CPU
+             F_CPU := $(call PARSE_BOARD,$(BOARD_TAG),build.f_cpu)
+         endif
+@@ -635,6 +718,25 @@ ifeq ($(strip $(NO_CORE)),)
+                 USB_PID := $(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).build.pid)
+             endif
+         endif
++
++        ifndef USB_PRODUCT
++            USB_PRODUCT := $(call PARSE_BOARD,$(BOARD_TAG),build.usb_product)
++            ifdef USB_PRODUCT
++                $(call show_config_variable,USB_PRODUCT,[COMPUTED])
++            endif
++        endif
++
++        ifndef USB_MANUFACTURER
++            USB_MANUFACTURER := $(call PARSE_BOARD,$(BOARD_TAG),build.usb_manufacturer)
++            ifndef USB_MANUFACTURER
++                USB_MANUFACTURER = "Unknown"
++            else
++                $(call show_config_variable,USB_MANUFACTURER,[COMPUTED])
++            endif
++        endif
++
++        # add caterina flag to ARD_RESET_OPTS
++        ARD_RESET_OPTS += --caterina
+     endif
+ 
+     # normal programming info
+@@ -658,21 +760,36 @@ ifeq ($(strip $(NO_CORE)),)
+     endif
+ 
+     ifndef ISP_HIGH_FUSE
+-        ISP_HIGH_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).bootloader.high_fuses)
++        ifdef BOARD_CLOCK
++            ISP_HIGH_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),menu.(speed|clock).$(BOARD_CLOCK).bootloader.high_fuses)
++        endif
++        ifndef ISP_HIGH_FUSE
++            ISP_HIGH_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).bootloader.high_fuses)
++        endif
+         ifndef ISP_HIGH_FUSE
+             ISP_HIGH_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),bootloader.high_fuses)
+         endif
+     endif
+ 
+     ifndef ISP_LOW_FUSE
+-        ISP_LOW_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).bootloader.low_fuses)
++        ifdef BOARD_CLOCK
++            ISP_LOW_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),menu.(speed|clock).$(BOARD_CLOCK).bootloader.low_fuses)
++        endif
++        ifndef ISP_LOW_FUSE
++            ISP_LOW_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).bootloader.low_fuses)
++        endif
+         ifndef ISP_LOW_FUSE
+             ISP_LOW_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),bootloader.low_fuses)
+         endif
+     endif
+ 
+     ifndef ISP_EXT_FUSE
+-        ISP_EXT_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).bootloader.extended_fuses)
++        ifdef BOARD_CLOCK
++            ISP_EXT_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),menu.(speed|clock).$(BOARD_CLOCK).bootloader.extended_fuses)
++        endif
++        ifndef ISP_EXT_FUSE
++            ISP_EXT_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).bootloader.extended_fuses)
++        endif
+         ifndef ISP_EXT_FUSE
+             ISP_EXT_FUSE := $(call PARSE_BOARD,$(BOARD_TAG),bootloader.extended_fuses)
+         endif
+@@ -736,24 +853,21 @@ endif
+ # Reset
+ 
+ ifndef RESET_CMD
+-	ARD_RESET_ARDUINO := $(shell which ard-reset-arduino 2> /dev/null)
+-	ifndef ARD_RESET_ARDUINO
+-		# same level as *.mk in bin directory when checked out from git
+-		# or in $PATH when packaged
+-		ARD_RESET_ARDUINO = $(ARDMK_DIR)/bin/ard-reset-arduino
+-	endif
+-    ifneq ($(CATERINA),)
+-        ifneq (,$(findstring CYGWIN,$(shell uname -s)))
+-            RESET_CMD = $(ARD_RESET_ARDUINO) --caterina $(ARD_RESET_OPTS) $(DEVICE_PATH)
+-        else
+-            RESET_CMD = $(ARD_RESET_ARDUINO) --caterina $(ARD_RESET_OPTS) $(call get_monitor_port)
+-        endif
++  ARD_RESET_ARDUINO := $(shell which ard-reset-arduino 2> /dev/null)
++  ifndef ARD_RESET_ARDUINO
++    # same level as *.mk in bin directory when checked out from git
++    # or in $PATH when packaged
++    ARD_RESET_ARDUINO = $(ARDMK_DIR)/bin/ard-reset-arduino
++  endif
++  ifneq (,$(findstring CYGWIN,$(shell uname -s)))
++      # confirm user is using default cygwin unix Python (which uses ttySx) and not Windows Python (which uses COMx)
++      ifeq ($(shell which python),/usr/bin/python)
++        RESET_CMD = $(ARD_RESET_ARDUINO) $(ARD_RESET_OPTS) $(DEVICE_PATH)
++      else
++        RESET_CMD = $(ARD_RESET_ARDUINO) $(ARD_RESET_OPTS) $(call get_monitor_port)
++      endif
+     else
+-        ifneq (,$(findstring CYGWIN,$(shell uname -s)))
+-            RESET_CMD = $(ARD_RESET_ARDUINO) $(ARD_RESET_OPTS) $(DEVICE_PATH)
+-        else
+-            RESET_CMD = $(ARD_RESET_ARDUINO) $(ARD_RESET_OPTS) $(call get_monitor_port)
+-        endif
++        RESET_CMD = $(ARD_RESET_ARDUINO) $(ARD_RESET_OPTS) $(call get_monitor_port)
+     endif
+ endif
+ 
+@@ -796,7 +910,7 @@ ifeq ($(strip $(CHK_SOURCES)),)
+                 $(call show_config_info,No .pde or .ino files found. If you are compiling .c or .cpp files then you need to explicitly include Arduino header files)
+             else
+                 #TODO: Support more than one file. https://github.com/sudar/Arduino-Makefile/issues/49
+-                $(error Need exactly one .pde or .ino file. This makefile doesn't support multiple .ino/.pde files yet)
++                $(error Need exactly one .pde or .ino file. This makefile doesn\'t support multiple .ino/.pde files yet)
+             endif
+         endif
+ 
+@@ -807,17 +921,46 @@ endif
+ ifeq ($(strip $(NO_CORE)),)
+     ifdef ARDUINO_CORE_PATH
+         CORE_C_SRCS     = $(wildcard $(ARDUINO_CORE_PATH)/*.c)
+-        CORE_C_SRCS    += $(wildcard $(ARDUINO_CORE_PATH)/avr-libc/*.c)
++        CORE_C_SRCS    += $(wildcard $(ARDUINO_CORE_PATH)/$(TOOL_PREFIX)-libc/*.c)
+         CORE_CPP_SRCS   = $(wildcard $(ARDUINO_CORE_PATH)/*.cpp)
+         CORE_AS_SRCS    = $(wildcard $(ARDUINO_CORE_PATH)/*.S)
+ 
++        # ArduinoCore-API
++        CORE_C_SRCS    += $(wildcard $(ARDUINO_CORE_PATH)/api/*.c)
++        CORE_CPP_SRCS  += $(wildcard $(ARDUINO_CORE_PATH)/api/*.cpp)
++
++        # USB Core if samd or sam
++        ifeq ($(findstring sam, $(strip $(ARCHITECTURE))), sam)
++            CORE_C_SRCS    += $(wildcard $(ARDUINO_CORE_PATH)/avr/*.c) # avr core emulation files
++            CORE_C_SRCS    += $(wildcard $(ARDUINO_CORE_PATH)/USB/*.c)
++            CORE_CPP_SRCS  += $(wildcard $(ARDUINO_CORE_PATH)/USB/*.cpp)
++        endif
++
+         ifneq ($(strip $(NO_CORE_MAIN_CPP)),)
+             CORE_CPP_SRCS := $(filter-out %main.cpp, $(CORE_CPP_SRCS))
+             $(call show_config_info,NO_CORE_MAIN_CPP set so core library will not include main.cpp,[MANUAL])
+         endif
+ 
++        # Add core files for sam devices in CORE_OJBS filtering specific paths
++        ifdef SAM_CORE_PATH
++            SAM_CORE_OBJ_FILES  = $(SAM_CORE_C_SRCS:.c=.c.o) $(SAM_CORE_CPP_SRCS:.cpp=.cpp.o) $(SAM_CORE_AS_SRCS:.S=.S.o)
++            # variant core files
++            CORE_OBJS   += $(patsubst $(SAM_CORE_PATH)/%,  \
++                $(OBJDIR)/core/%, $(filter $(SAM_CORE_PATH)/%, $(SAM_CORE_OBJ_FILES)))
++            # libsam on Due
++            ifdef SAM_LIBSAM_PATH
++            CORE_OBJS   += $(patsubst $(SAM_LIBSAM_PATH)/source/%,  \
++                $(OBJDIR)/core/%, $(filter $(SAM_LIBSAM_PATH)/source/%, $(SAM_CORE_OBJ_FILES)))
++            endif
++            # chip sources on Due
++            ifdef SAM_SYSTEM_PATH
++            CORE_OBJS   += $(patsubst $(SAM_SYSTEM_PATH)/source/%, \
++                $(OBJDIR)/core/%, $(filter $(SAM_SYSTEM_PATH)/source/%, $(SAM_CORE_OBJ_FILES)))
++            endif
++        endif
++
+         CORE_OBJ_FILES  = $(CORE_C_SRCS:.c=.c.o) $(CORE_CPP_SRCS:.cpp=.cpp.o) $(CORE_AS_SRCS:.S=.S.o)
+-        CORE_OBJS       = $(patsubst $(ARDUINO_CORE_PATH)/%,  \
++        CORE_OBJS       += $(patsubst $(ARDUINO_CORE_PATH)/%,  \
+                 $(OBJDIR)/core/%,$(CORE_OBJ_FILES))
+     endif
+ else
+@@ -861,7 +1004,7 @@ ifeq ($(strip $(NO_CORE)),)
+             $(call show_config_variable,MONITOR_BAUDRATE,[DETECTED], (in sketch))
+         endif
+     else
+-        $(call show_config_variable,MONITOR_BAUDRATE, [USER])
++        $(call show_config_variable,MONITOR_BAUDRATE,[USER])
+     endif
+ 
+     ifndef MONITOR_CMD
+@@ -889,20 +1032,25 @@ endif
+ TARGET_HEX = $(OBJDIR)/$(TARGET).hex
+ TARGET_ELF = $(OBJDIR)/$(TARGET).elf
+ TARGET_EEP = $(OBJDIR)/$(TARGET).eep
++TARGET_BIN = $(OBJDIR)/$(TARGET).bin
+ CORE_LIB   = $(OBJDIR)/libcore.a
+ 
+-# Names of executables - chipKIT needs to override all to set paths to PIC32
+-# tools, and we can't use "?=" assignment because these are already implicitly
++# Names of executables
++# In the rare case of wanting to override a path and/or excecutable
++# name, the OVERRIDE_EXECUTABLES variable must be defned and _all_
++# the excecutables (CC, CXX, AS, OBJCOPY, OBJDUMP AR, SIZE and NM)
++# _must_ be defined in the calling makefile.
++# We can't use "?=" assignment because these are already implicitly
+ # defined by Make (e.g. $(CC) == cc).
+ ifndef OVERRIDE_EXECUTABLES
+-    CC      = $(AVR_TOOLS_PATH)/$(CC_NAME)
+-    CXX     = $(AVR_TOOLS_PATH)/$(CXX_NAME)
+-    AS      = $(AVR_TOOLS_PATH)/$(AS_NAME)
+-    OBJCOPY = $(AVR_TOOLS_PATH)/$(OBJCOPY_NAME)
+-    OBJDUMP = $(AVR_TOOLS_PATH)/$(OBJDUMP_NAME)
+-    AR      = $(AVR_TOOLS_PATH)/$(AR_NAME)
+-    SIZE    = $(AVR_TOOLS_PATH)/$(SIZE_NAME)
+-    NM      = $(AVR_TOOLS_PATH)/$(NM_NAME)
++    CC      = $(TOOLS_PATH)/$(CC_NAME)
++    CXX     = $(TOOLS_PATH)/$(CXX_NAME)
++    AS      = $(TOOLS_PATH)/$(AS_NAME)
++    OBJCOPY = $(TOOLS_PATH)/$(OBJCOPY_NAME)
++    OBJDUMP = $(TOOLS_PATH)/$(OBJDUMP_NAME)
++    AR      = $(TOOLS_PATH)/$(AR_NAME)
++    SIZE    = $(TOOLS_PATH)/$(SIZE_NAME)
++    NM      = $(TOOLS_PATH)/$(NM_NAME)
+ endif
+ 
+ REMOVE  = rm -rf
+@@ -1004,6 +1152,7 @@ endif
+ 
+ # SoftwareSerial requires -Os (some delays are tuned for this optimization level)
+ %SoftwareSerial.cpp.o : OPTIMIZATION_FLAGS = -Os
++%Uart.cpp.o : OPTIMIZATION_FLAGS = -Os
+ 
+ ifndef MCU_FLAG_NAME
+     MCU_FLAG_NAME = mmcu
+@@ -1013,11 +1162,17 @@ else
+ endif
+ 
+ # Using += instead of =, so that CPPFLAGS can be set per sketch level
+-CPPFLAGS      += -$(MCU_FLAG_NAME)=$(MCU) -DF_CPU=$(F_CPU) -DARDUINO=$(ARDUINO_VERSION) $(ARDUINO_ARCH_FLAG) -D__PROG_TYPES_COMPAT__ \
+-        -I$(ARDUINO_CORE_PATH) -I$(ARDUINO_VAR_PATH)/$(VARIANT) \
++CPPFLAGS      += -$(MCU_FLAG_NAME)=$(MCU) -DF_CPU=$(F_CPU) -DARDUINO=$(ARDUINO_VERSION) $(ARDUINO_ARCH_FLAG) \
++        -I$(ARDUINO_CORE_PATH) -I$(ARDUINO_CORE_PATH)/api -I$(ARDUINO_VAR_PATH)/$(VARIANT) \
+         $(SYS_INCLUDES) $(PLATFORM_INCLUDES) $(USER_INCLUDES) -Wall -ffunction-sections \
+         -fdata-sections
+ 
++# PROG_TYPES_COMPAT is enabled by default for compatibility with the Arduino IDE.
++# By placing it before the user-provided CPPFLAGS rather than after, we allow the
++# the user to disable it if they like, by adding the negation of the flag
++# (-U__PROG_TYPES_COMPAT__) to the user-provided CPPFLAGS.
++CPPFLAGS := -D__PROG_TYPES_COMPAT__ $(CPPFLAGS)
++
+ ifdef DEBUG
+ OPTIMIZATION_FLAGS= $(DEBUG_FLAGS)
+ else
+@@ -1029,23 +1184,26 @@ CPPFLAGS += $(OPTIMIZATION_FLAGS)
+ # USB IDs for the Caterina devices like leonardo or micro
+ ifneq ($(CATERINA),)
+     CPPFLAGS += -DUSB_VID=$(USB_VID) -DUSB_PID=$(USB_PID)
++    ifdef USB_PRODUCT
++        CPPFLAGS += -DUSB_PRODUCT='$(USB_PRODUCT)' -DUSB_MANUFACTURER='$(USB_MANUFACTURER)'
++    endif
+ endif
+ 
+-# avr-gcc version that we can do maths on
++# $(TOOL_PREFIX)-gcc version that we can do maths on
+ CC_VERNUM = $(shell $(CC) -dumpversion | sed 's/\.//g')
+ 
+ # moved from above so we can find version-dependant ar
+-ifndef AR_NAME
++ifeq ($(TOOL_PREFIX), avr)
+     ifeq ($(shell expr $(CC_VERNUM) '>' 490), 1)
+-        AR_NAME      = avr-gcc-ar
++        AR_NAME      := $(TOOL_PREFIX)-gcc-ar
+     else
+-        AR_NAME      = avr-ar
++        AR_NAME      := $(TOOL_PREFIX)-ar
+     endif
+ endif
+ 
+ ifndef CFLAGS_STD
+     ifeq ($(shell expr $(CC_VERNUM) '>' 490), 1)
+-        CFLAGS_STD      = -std=gnu11 -flto -fno-fat-lto-objects
++        CFLAGS_STD      = -std=gnu11
+     else
+         CFLAGS_STD        =
+     endif
+@@ -1056,7 +1214,7 @@ endif
+ 
+ ifndef CXXFLAGS_STD
+     ifeq ($(shell expr $(CC_VERNUM) '>' 490), 1)
+-        CXXFLAGS_STD      = -std=gnu++11 -fno-threadsafe-statics -flto
++        CXXFLAGS_STD      = -std=gnu++11
+     else
+         CXXFLAGS_STD      =
+     endif
+@@ -1068,12 +1226,15 @@ endif
+ CFLAGS        += $(CFLAGS_STD)
+ CXXFLAGS      += -fpermissive -fno-exceptions $(CXXFLAGS_STD)
+ ASFLAGS       += -x assembler-with-cpp
++DIAGNOSTICS_COLOR_WHEN ?= always
+ ifeq ($(shell expr $(CC_VERNUM) '>' 490), 1)
+-    ASFLAGS += -flto
++    ASFLAGS  += -flto
++    CXXFLAGS += -fno-threadsafe-statics -flto -fno-devirtualize -fdiagnostics-color=$(DIAGNOSTICS_COLOR_WHEN)
++    CFLAGS   += -flto -fno-fat-lto-objects -fdiagnostics-color=$(DIAGNOSTICS_COLOR_WHEN)
+ endif
+ LDFLAGS       += -$(MCU_FLAG_NAME)=$(MCU) -Wl,--gc-sections -O$(OPTIMIZATION_LEVEL)
+ ifeq ($(shell expr $(CC_VERNUM) '>' 490), 1)
+-    LDFLAGS += -flto -fuse-linker-plugin
++		LDFLAGS += -flto -fuse-linker-plugin
+ endif
+ SIZEFLAGS     ?= --mcu=$(MCU) -C
+ 
+@@ -1132,9 +1293,14 @@ ifneq (,$(findstring AVR,$(shell $(SIZE) --help)))
+     avr_size = $(SIZE) $(SIZEFLAGS) --format=avr $(1)
+     $(call show_config_info,Size utility: AVR-aware for enhanced output,[AUTODETECTED])
+ else
+-    # We have a plain-old binutils version - just give it the hex.
+-    avr_size = $(SIZE) $(2)
+-    $(call show_config_info,Size utility: Basic (not AVR-aware),[AUTODETECTED])
++    ifeq ($(findstring sam, $(strip $(ARCHITECTURE))), sam)
++       avr_size = $(SIZE) $(SIZEFLAGS) $(1)
++       $(call show_config_info,Size utility: ARM,[AUTODETECTED])
++    else
++       # We have a plain-old binutils version - just give it the hex.
++       avr_size = $(SIZE) $(2)
++       $(call show_config_info,Size utility: Basic (not AVR-aware),[AUTODETECTED])
++    endif
+ endif
+ 
+ ifneq (,$(strip $(ARDUINO_LIBS)))
+@@ -1164,7 +1330,7 @@ endif
+ 
+ ########################################################################
+ # Tools version info
+-ARDMK_VERSION = 1.5
++ARDMK_VERSION = 1.6
+ $(call show_config_variable,ARDMK_VERSION,[COMPUTED])
+ 
+ CC_VERSION := $(shell $(CC) -dumpversion)
+@@ -1281,7 +1447,33 @@ $(OBJDIR)/core/%.S.o: $(ARDUINO_CORE_PATH)/%.S $(COMMON_DEPS) | $(OBJDIR)
+ 	@$(MKDIR) $(dir $@)
+ 	$(CC) -MMD -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
+ 
++# sam core files
++$(OBJDIR)/core/%.c.o: $(SAM_CORE_PATH)/%.c $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
++
++$(OBJDIR)/core/%.cpp.o: $(SAM_CORE_PATH)/%.cpp $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CXX) -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
++
++$(OBJDIR)/core/%.S.o: $(SAM_CORE_PATH)/%.S $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
++
++# due specific sources from sam core as doesn't core doesn't have SystemInit startup file
++$(OBJDIR)/core/%.c.o: $(SAM_LIBSAM_PATH)/source/%.c $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
++
++$(OBJDIR)/core/%.c.o: $(SAM_SYSTEM_PATH)/source/%.c $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
++
+ # various object conversions
++$(OBJDIR)/%.bin: $(OBJDIR)/%.elf $(COMMON_DEPS)
++	@$(MKDIR) $(dir $@)
++	-$(OBJCOPY) -O binary $< $@
++
+ $(OBJDIR)/%.hex: $(OBJDIR)/%.elf $(COMMON_DEPS)
+ 	@$(MKDIR) $(dir $@)
+ 	$(OBJCOPY) -O ihex -R .eeprom $< $@
+@@ -1307,12 +1499,28 @@ $(OBJDIR)/%.sym: $(OBJDIR)/%.elf $(COMMON_DEPS)
+ 	@$(MKDIR) $(dir $@)
+ 	$(NM) --size-sort --demangle --reverse-sort --line-numbers $< > $@
+ 
++########################################################################
++# Ctags
++
++# Assume ctags is on path unless has been specified
++ifndef CTAGS_EXEC
++    CTAGS_EXEC = ctags
++endif
++
++# Default to 'tags' unless user has specified a tags file
++ifndef TAGS_FILE
++    TAGS_FILE = tags
++endif
++
++# ctags command: append, flags unsort (as will be sorted after) and specify filename
++CTAGS_CMD = $(CTAGS_EXEC) $(CTAGS_OPTS) -auf
++
+ ########################################################################
+ # Avrdude
+ 
+ # If avrdude is installed separately, it can find its own config file
+ ifndef AVRDUDE
+-    AVRDUDE          = $(AVR_TOOLS_PATH)/avrdude
++    AVRDUDE          = $(TOOLS_PATH)/avrdude
+ endif
+ 
+ # Default avrdude options
+@@ -1338,7 +1546,11 @@ endif
+ # -D - Disable auto erase for flash memory
+ # Note: -D is needed for Mega boards.
+ #       (See https://github.com/sudar/Arduino-Makefile/issues/114#issuecomment-25011005)
+-AVRDUDE_ARD_OPTS = -D -c $(AVRDUDE_ARD_PROGRAMMER) -b $(AVRDUDE_ARD_BAUDRATE) -P
++ifeq ($(AVRDUDE_AUTOERASE_FLASH), yes)
++else
++    AVRDUDE_ARD_OPTS = -D
++endif
++AVRDUDE_ARD_OPTS += -c $(AVRDUDE_ARD_PROGRAMMER) -b $(AVRDUDE_ARD_BAUDRATE) -P
+ ifeq ($(CURRENT_OS), WINDOWS)
+     # get_monitor_port checks to see if the monitor port exists, assuming it is
+     # a file. In Windows, avrdude needs the port in the format 'com1' which is
+@@ -1405,12 +1617,21 @@ endif
+ # so we do not set it by default.
+ AVRDUDE_ISP_OPTS = -c $(ISP_PROG) -b $(AVRDUDE_ISP_BAUDRATE)
+ 
+-ifndef $(ISP_PORT)
+-    ifneq ($(strip $(ISP_PROG)),$(filter $(ISP_PROG), usbasp usbtiny gpio linuxgpio avrispmkii dragon_isp dragon_dw))
+-        AVRDUDE_ISP_OPTS += -P $(call get_isp_port)
++ifndef ISP_PORT
++    ifneq ($(strip $(ISP_PROG)),$(filter $(ISP_PROG), atmelice_isp usbasp usbtiny gpio linuxgpio avrispmkii dragon_isp dragon_dw))
++        # switch for sam devices as bootloader will be on usb serial if using stk500_v2
++        ifeq ($(findstring sam, $(strip $(ARCHITECTURE))), sam)
++            AVRDUDE_ISP_OPTS += -P $(call get_monitor_port)
++        else
++            AVRDUDE_ISP_OPTS += -P $(call get_isp_port)
++        endif
+     endif
+ else
+-	AVRDUDE_ISP_OPTS += -P $(call get_isp_port)
++    ifeq ($(CURRENT_OS), WINDOWS)
++        AVRDUDE_ISP_OPTS += -P $(ISP_PORT)
++    else
++        AVRDUDE_ISP_OPTS += -P $(call get_isp_port)
++    endif
+ endif
+ 
+ ifndef ISP_EEPROM
+@@ -1428,7 +1649,7 @@ endif
+ ########################################################################
+ # Explicit targets start here
+ 
+-all: 		$(TARGET_EEP) $(TARGET_HEX)
++all: 		$(TARGET_EEP) $(TARGET_BIN) $(TARGET_HEX)
+ 
+ # Rule to create $(OBJDIR) automatically. All rules with recipes that
+ # create a file within it, but do not already depend on a file within it
+@@ -1442,8 +1663,15 @@ $(OBJDIR): pre-build
+ pre-build:
+ 		$(call runscript_if_exists,$(PRE_BUILD_HOOK))
+ 
++# copied from arduino with start-group, end-group
+ $(TARGET_ELF): 	$(LOCAL_OBJS) $(CORE_LIB) $(OTHER_OBJS)
+-		$(CC) $(LDFLAGS) -o $@ $(LOCAL_OBJS) $(CORE_LIB) $(OTHER_OBJS) $(OTHER_LIBS) -lc -lm $(LINKER_SCRIPTS)
++# sam devices need start and end group
++ifeq ($(findstring sam, $(strip $(ARCHITECTURE))), sam)
++		$(CC) $(LINKER_SCRIPTS) -Wl,-Map=$(OBJDIR)/$(TARGET).map -o $@ $(LOCAL_OBJS) $(OTHER_OBJS) $(OTHER_LIBS) $(LDFLAGS) $(CORE_LIB) -Wl,--end-group
++# otherwise traditional
++else
++		$(CC) $(LDFLAGS) -o $@ $(LOCAL_OBJS) $(OTHER_OBJS) $(OTHER_LIBS) $(CORE_LIB) -lc -lm $(LINKER_SCRIPTS)
++endif
+ 
+ $(CORE_LIB):	$(CORE_OBJS) $(LIB_OBJS) $(PLATFORM_LIB_OBJS) $(USER_LIB_OBJS)
+ 		$(AR) rcs $@ $(CORE_OBJS) $(LIB_OBJS) $(PLATFORM_LIB_OBJS) $(USER_LIB_OBJS)
+@@ -1451,21 +1679,47 @@ $(CORE_LIB):	$(CORE_OBJS) $(LIB_OBJS) $(PLATFORM_LIB_OBJS) $(USER_LIB_OBJS)
+ error_on_caterina:
+ 		$(ERROR_ON_CATERINA)
+ 
+-
+ # Use submake so we can guarantee the reset happens
+ # before the upload, even with make -j
+ upload:		$(TARGET_HEX) verify_size
++ifeq ($(findstring sam, $(strip $(ARCHITECTURE))), sam)
++# do reset toggle at 1200 BAUD to enter bootloader if using avrdude or bossa
++ifeq ($(strip $(UPLOAD_TOOL)), avrdude)
++		$(MAKE) reset
++else ifeq ($(findstring bossac, $(strip $(UPLOAD_TOOL))), bossac)
++		$(MAKE) reset
++endif
++		$(MAKE) do_sam_upload
++else
+ 		$(MAKE) reset
+ 		$(MAKE) do_upload
++endif
+ 
+ raw_upload:	$(TARGET_HEX) verify_size
++ifeq ($(findstring sam, $(strip $(ARCHITECTURE))), sam)
++		$(MAKE) do_sam_upload
++else
+ 		$(MAKE) error_on_caterina
+ 		$(MAKE) do_upload
++endif
+ 
+ do_upload:
+ 		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ARD_OPTS) \
+ 			$(AVRDUDE_UPLOAD_HEX)
+ 
++do_sam_upload:  $(TARGET_BIN) verify_size
++ifeq ($(findstring openocd, $(strip $(UPLOAD_TOOL))), openocd)
++		$(OPENOCD) $(OPENOCD_OPTS) -c "telnet_port disabled; program {{$(TARGET_BIN)}} verify reset $(BOOTLOADER_SIZE); shutdown"
++else ifeq ($(findstring bossac, $(strip $(UPLOAD_TOOL))), bossac)
++		$(BOSSA) $(BOSSA_OPTS) $(TARGET_BIN)
++else ifeq ($(findstring gdb, $(strip $(UPLOAD_TOOL))), gdb)
++		$(GDB) $(GDB_UPLOAD_OPTS)
++else ifeq ($(strip $(UPLOAD_TOOL)), avrdude)
++		$(MAKE) ispload
++else
++		@$(ECHO) "$(BOOTLOADER_UPLOAD_TOOL) not currently supported!\n\n"
++endif
++
+ do_eeprom:	$(TARGET_EEP) $(TARGET_HEX)
+ 		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ARD_OPTS) \
+ 			$(AVRDUDE_UPLOAD_EEP)
+@@ -1494,23 +1748,31 @@ reset_stty:
+ 		$$STTYF $(call get_monitor_port) -hupcl
+ 
+ ispload:	$(TARGET_EEP) $(TARGET_HEX) verify_size
+-		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) \
++		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) -e \
+ 			$(AVRDUDE_ISPLOAD_OPTS)
+ 
+ burn_bootloader:
+-ifneq ($(strip $(AVRDUDE_ISP_FUSES_PRE)),)
+-		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) -e $(AVRDUDE_ISP_FUSES_PRE)
+-endif
+-ifneq ($(strip $(AVRDUDE_ISP_BURN_BOOTLOADER)),)
+-		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) $(AVRDUDE_ISP_BURN_BOOTLOADER)
+-endif
+-ifneq ($(strip $(AVRDUDE_ISP_FUSES_POST)),)
+-		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) $(AVRDUDE_ISP_FUSES_POST)
++ifeq ($(findstring sam, $(strip $(ARCHITECTURE))), sam)
++    ifeq ($(strip $(BOOTLOADER_UPLOAD_TOOL)), openocd)
++				$(OPENOCD) $(OPENOCD_OPTS) -c "telnet_port disabled; init; halt; $(BOOTLOADER_UNPROTECT); program {{$(BOOTLOADER_PARENT)/$(BOOTLOADER_FILE)}} verify reset; shutdown"
++    else
++				@$(ECHO) "$(BOOTLOADER_UPLOAD_TOOL) not currently supported!\n\n"
++    endif
++else
++    ifneq ($(strip $(AVRDUDE_ISP_FUSES_PRE)),)
++				$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) -e $(AVRDUDE_ISP_FUSES_PRE)
++    endif
++    ifneq ($(strip $(AVRDUDE_ISP_BURN_BOOTLOADER)),)
++				$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) $(AVRDUDE_ISP_BURN_BOOTLOADER)
++    endif
++    ifneq ($(strip $(AVRDUDE_ISP_FUSES_POST)),)
++				$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) $(AVRDUDE_ISP_FUSES_POST)
++    endif
+ endif
+ 
+ set_fuses:
+ ifneq ($(strip $(AVRDUDE_ISP_FUSES_PRE)),)
+-		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) -e $(AVRDUDE_ISP_FUSES_PRE)
++		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) $(AVRDUDE_ISP_FUSES_PRE)
+ endif
+ ifneq ($(strip $(AVRDUDE_ISP_FUSES_POST)),)
+ 		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) $(AVRDUDE_ISP_FUSES_POST)
+@@ -1529,20 +1791,26 @@ show_submenu:
+ 	@$(CAT) $(BOARDS_TXT) | grep -E '[a-zA-Z0-9_\-]+.menu.(cpu|chip).[a-zA-Z0-9_\-]+=' | sort -uf | sed 's/.menu.\(cpu\|chip\)./:/' | sed 's/=/:/' | column -s: -t
+ 
+ monitor:
+-ifeq ($(MONITOR_CMD), 'putty')
+-	ifneq ($(strip $(MONITOR_PARAMS)),)
++ifeq ($(notdir $(MONITOR_CMD)), putty)
++ifneq ($(strip $(MONITOR_PARAMS)),)
+ 	$(MONITOR_CMD) -serial -sercfg $(MONITOR_BAUDRATE),$(MONITOR_PARAMS) $(call get_monitor_port)
+-	else
++else
+ 	$(MONITOR_CMD) -serial -sercfg $(MONITOR_BAUDRATE) $(call get_monitor_port)
+-	endif
+-else ifeq ($(MONITOR_CMD), picocom)
++endif
++else ifeq ($(notdir $(MONITOR_CMD)), picocom)
+ 		$(MONITOR_CMD) -b $(MONITOR_BAUDRATE) $(MONITOR_PARAMS) $(call get_monitor_port)
+-else ifeq ($(MONITOR_CMD), cu)
++else ifeq ($(notdir $(MONITOR_CMD)), cu)
+ 		$(MONITOR_CMD) -l $(call get_monitor_port) -s $(MONITOR_BAUDRATE)
+ else
+ 		$(MONITOR_CMD) $(call get_monitor_port) $(MONITOR_BAUDRATE)
+ endif
+ 
++debug_init:
++	$(OPENOCD) $(OPENOCD_OPTS)
++
++debug:
++	$(GDB) $(GDB_OPTS)
++
+ disasm: $(OBJDIR)/$(TARGET).lss
+ 		@$(ECHO) "The compiled ELF file has been disassembled to $(OBJDIR)/$(TARGET).lss\n\n"
+ 
+@@ -1562,6 +1830,22 @@ generate_assembly: $(OBJDIR)/$(TARGET).s
+ generated_assembly: generate_assembly
+ 		@$(ECHO) "\"generated_assembly\" target is deprecated. Use \"generate_assembly\" target instead\n\n"
+ 
++tags:
++ifneq ($(words $(wildcard $(TAGS_FILE))), 0)
++	rm -f $(TAGS_FILE)
++endif
++	@$(ECHO) "Generating tags for local sources (INO an PDE files as C++): "
++	$(CTAGS_CMD) $(TAGS_FILE) --langmap=c++:+.ino.pde $(LOCAL_SRCS)
++ifneq ($(words $(ARDUINO_LIBS)), 0)
++		@$(ECHO) "Generating tags for project libraries: "
++		$(CTAGS_CMD) $(TAGS_FILE) $(foreach lib, $(ARDUINO_LIBS),$(USER_LIB_PATH)/$(lib)/*)
++endif
++	@$(ECHO) "Generating tags for Arduino core: "
++	$(CTAGS_CMD) $(TAGS_FILE) $(ARDUINO_CORE_PATH)/*
++	@$(ECHO) "Sorting..\n"
++	@sort $(TAGS_FILE) -o $(TAGS_FILE)
++	@$(ECHO) "Tag file generation complete, output: $(TAGS_FILE)\n"
++
+ help_vars:
+ 		@$(CAT) $(ARDMK_DIR)/arduino-mk-vars.md
+ 
+@@ -1580,8 +1864,10 @@ help:
+   make show_boards       - list all the boards defined in boards.txt\n\
+   make show_submenu      - list all board submenus defined in boards.txt\n\
+   make monitor           - connect to the Arduino's serial port\n\
++  make debug_init        - start openocd gdb server\n\
++  make debug             - connect to gdb target and begin debugging\n\
+   make size              - show the size of the compiled output (relative to\n\
+-                           resources, if you have a patched avr-size).\n\
++                           resources, if you have a patched $(TOOL_PREFIX)-size).\n\
+   make verify_size       - verify that the size of the final file is less than\n\
+                            the capacity of the micro controller.\n\
+   make symbol_sizes      - generate a .sym file containing symbols and their\n\
+@@ -1593,6 +1879,7 @@ help:
+                            generated assembly of the main sketch.\n\
+   make burn_bootloader   - burn bootloader and fuses\n\
+   make set_fuses         - set fuses without burning bootloader\n\
++  make tags              - generate tags file including project libs and Arduino core\n\
+   make help_vars         - print all variables that can be overridden\n\
+   make help              - show this help\n\
+ "
+@@ -1600,7 +1887,7 @@ help:
+ 
+ .PHONY: all upload raw_upload raw_eeprom error_on_caterina reset reset_stty ispload \
+         clean depends size show_boards monitor disasm symbol_sizes generated_assembly \
+-        generate_assembly verify_size burn_bootloader help pre-build
++        generate_assembly verify_size burn_bootloader help pre-build tags debug debug_init
+ 
+ # added - in the beginning, so that we don't get an error if the file is not present
+ -include $(DEPS)
+diff --git a/Common.mk b/Common.mk
+index 7eda5ea..0c1f92c 100644
+--- a/Common.mk
++++ b/Common.mk
+@@ -1,9 +1,19 @@
++COMMON_INCLUDED = TRUE
+ # Useful functions
+ # Returns the first argument (typically a directory), if the file or directory
+ # named by concatenating the first and optionally second argument
+ # (directory and optional filename) exists
+ dir_if_exists = $(if $(wildcard $(1)$(2)),$(1))
+ 
++# result = $(call READ_BOARD_TXT, 'boardname', 'parameter')
++PARSE_BOARD = $(shell if [ -f $(BOARDS_TXT) ]; \
++then \
++  grep -Ev '^\#' $(BOARDS_TXT) | \
++  grep -E "^[ \t]*$(1).$(2)=" | \
++  cut -d = -f 2- | \
++  cut -d : -f 2; \
++fi)
++
+ # Run a shell script if it exists. Stops make on error.
+ runscript_if_exists =                                                          \
+     $(if $(wildcard $(1)),                                                     \
+@@ -14,7 +24,7 @@ runscript_if_exists =                                                          \
+ 
+ # For message printing: pad the right side of the first argument with spaces to
+ # the number of bytes indicated by the second argument.
+-space_pad_to = $(shell echo $(1) "                                                      " | head -c$(2))
++space_pad_to = $(shell echo "$(1)                                                       " | head -c$(2))
+ 
+ # Call with some text, and a prefix tag if desired (like [AUTODETECTED]),
+ show_config_info = $(call arduino_output,- $(call space_pad_to,$(2),20) $(1))
+@@ -26,8 +36,11 @@ show_config_variable = $(call show_config_info,$(1) = $($(1)) $(3),$(2))
+ # Just a nice simple visual separator
+ show_separator = $(call arduino_output,-------------------------)
+ 
++# Master Arduino Makefile include (after user Makefile)
++ardmk_include = $(shell basename $(word 2,$(MAKEFILE_LIST)))
++
+ $(call show_separator)
+-$(call arduino_output,Arduino.mk Configuration:)
++$(call arduino_output,$(call ardmk_include) Configuration:)
+ 
+ ########################################################################
+ #
+@@ -81,7 +94,7 @@ else
+ endif
+ 
+ ifeq ($(CURRENT_OS),WINDOWS)
+-    ifneq ($(shell echo $(ARDUINO_DIR) | egrep '^(/|[a-zA-Z]:\\)'),)
+-        echo $(error On Windows, ARDUINO_DIR must be a relative path)
++		ifneq ($(shell echo $(ARDUINO_DIR) | egrep '\\|[[:space:]]|cygdrive'),)
++        echo $(error On Windows, ARDUINO_DIR and other defines must use forward slash and not contain spaces, special characters or be cygdrive relative)
+     endif
+ endif
+diff --git a/HISTORY.md b/HISTORY.md
+index d8f89e6..459858d 100644
+--- a/HISTORY.md
++++ b/HISTORY.md
+@@ -5,7 +5,33 @@ The following is the rough list of changes that went into different versions.
+ I tried to give credit whenever possible. If I have missed anyone, kindly add it to the list.
+ 
+ ### In Development
+-- TBC
++- Fix: Moved CORE_LIB to the last position of the defined linked objects. (https://github.com/wingunder)
++- Fix: Moved ATtiny examples to ATtinyBlink, updated alternate core instructions (issue #537) (https://github.com/sej7278)
++- Fix: Add -fno-devirtualize flag to workaround g++ segfault bug (issue #486). (https://github.com/sej7278)
++- Fix: Quote the prefix tag in the space_pad_to function
++- Fix: recognize serial monitors with full path in MONITOR_CMD
++- Fix: Grab USB_PRODUCT and USB_MANUFACTURER from boards.txt for 32u4 boards (issue #594).
++- Fix: Show the configuration when ARDUINO_QUIET=0
++- Tweak: Move chip erase flag from set_fuses to ispload to prevent sketch being nuked when setting fuses
++- Tweak: Set ARDMK_VERSION to 1.6 (https://github.com/sej7278)
++- Tweak: Move non-standard-related items from CxxFLAGS_STD to CxxFLAGS (issue #523) (https://github.com/sej7278)
++- Tweak: Update Windows usage documentation and allow non-relative paths (issue #519) (https://github.com/tuna-f1sh)
++- Tweak: Support Cygwin Unix Python and Windows installation on Windows to pass correct port binding. (https://github.com/tuna-f1sh)
++- Tweak: Update how avr-size is called on Sam, also moved to gnu11 std (issue #602) (https://github.com/tuna-f1sh)
++- New: Added -fdiagnostics-color to \*STD flags (https://github.com/sej7278)
++- New: Made -fdiagnostics-color take a variiable DIAGNOSTICS_COLOR_WHEN: never, always, auto. (https://github.com/wingunder)
++- New: Add generation of tags file using ctags, which automatically includes project libs and Arduino core. (https://github.com/tuna-f1sh)
++- New: Add template Makefile and project boilerplate initialise script, `ardmk-init`. (https://github.com/tuna-f1sh)
++- New: Support atmelice_isp JTAG tool as ISP programmer. (https://github.com/tuna-f1sh)
++- New: Compatibility with deprecated pgmspace.h API can now be disabled since it sometimes causes bogus compiler warnings (issue #546)
++- New: Support Arduino ARM SAMD devices (Zero, M0 Pro, Feather M0). (https://github.com/tuna-f1sh)
++- New: Support Arduino ARM SAM devices (Due). (https://github.com/tuna-f1sh)
++- New: Moved the PARSE_BOARD macro to Common.mk and use only this to parse the boards.txt file. (https://github.com/wingunder)
++- New: Added the TOOL_PREFIX variable for setting up the executable tools centrally and generically. (https://github.com/wingunder)
++- New: Add support for BOARD_CLOCK for board.menu.speed and board.menu.clock entries in boards.txt files. (https://github.com/dewhisna)
++- New: Updated Arch instructions. (https://github.com/Akram-Chehaima)
++- New: Add support for Robotis OpenCR 1.0 boards.
++- New: Build the ArduinoCore API
+ 
+ ### 1.6.0 (2017-07-11)
+ - Fix: Allowed for SparkFun's weird usb pid/vid submenu shenanigans (issue #499). (https://github.com/sej7278)
+@@ -17,6 +43,7 @@ I tried to give credit whenever possible. If I have missed anyone, kindly add it
+ - New: Add support for good old cu as monitor command (issue #492) (https://github.com/mwm)
+ - New: Add a documentation how to setup Makefile for 3rd party boards (issue #499). (https://github.com/MilanV)
+ - New: Add support for Robotis OpenCM boards
++- Fix: Syntax of inner conditional statements of monitor command evaluated when MONITOR_CMD = putty
+ 
+ ### 1.5.2 (2017-01-11)
+ 
+diff --git a/OpenCM.mk b/OpenCM.mk
+index 257cf78..b6d0534 100644
+--- a/OpenCM.mk
++++ b/OpenCM.mk
+@@ -44,17 +44,12 @@ ifndef BOARDS_TXT
+     BOARDS_TXT           = $(ARDUINO_DIR)/hardware/$(ARDMK_VENDOR)/boards.txt
+ endif
+ 
+-ifndef PARSE_OPENCM
+-    # result = $(call READ_BOARD_TXT, 'boardname', 'parameter')
+-    PARSE_OPENCM = $(shell grep -v "^\#" "$(BOARDS_TXT)" | grep $(1).$(2) | cut -d = -f 2- )
+-endif
+-
+ ifndef F_CPU
+-    F_CPU := $(call PARSE_OPENCM,$(BOARD_TAG),build.f_cpu)
++    F_CPU := $(call PARSE_BOARD,$(BOARD_TAG),build.f_cpu)
+ endif
+ 
+ # if boards.txt gets modified, look there, else hard code it
+-ARCHITECTURE = $(call PARSE_OPENCM,$(BOARD_TAG),build.architecture)
++ARCHITECTURE = $(call PARSE_BOARD,$(BOARD_TAG),build.architecture)
+ ifeq ($(strip $(ARCHITECTURE)),)
+     ARCHITECTURE = arm
+ endif
+@@ -74,81 +69,11 @@ endif
+ ########################################################################
+ # command names
+ 
+-ifndef CC_NAME
+-    CC_NAME := $(call PARSE_OPENCM,$(BOARD_TAG),build.command.gcc)
+-    ifndef CC_NAME
+-        CC_NAME := arm-none-eabi-gcc
+-    else
+-        $(call show_config_variable,CC_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef CXX_NAME
+-    CXX_NAME := $(call PARSE_OPENCM,$(BOARD_TAG),build.command.g++)
+-    ifndef CXX_NAME
+-        CXX_NAME := arm-none-eabi-g++
+-    else
+-        $(call show_config_variable,CXX_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef AS_NAME
+-    AS_NAME := $(call PARSE_OPENCM,$(BOARD_TAG),build.command.as)
+-    ifndef AS_NAME
+-        AS_NAME := arm-none-eabi-as
+-    else
+-        $(call show_config_variable,AS_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef OBJDUMP_NAME
+-    OBJDUMP_NAME := $(call PARSE_OPENCM,$(BOARD_TAG),build.command.objdump)
+-    ifndef OBJDUMP_NAME
+-        OBJDUMP_NAME := arm-none-eabi-objdump
+-    else
+-        $(call show_config_variable,OBJDUMP_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef AR_NAME
+-    AR_NAME := $(call PARSE_OPENCM,$(BOARD_TAG),build.command.ar)
+-    ifndef AR_NAME
+-        AR_NAME := arm-none-eabi-ar
+-    else
+-        $(call show_config_variable,AR_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef SIZE_NAME
+-    SIZE_NAME := $(call PARSE_OPENCM,$(BOARD_TAG),build.command.size)
+-    ifndef SIZE_NAME
+-        SIZE_NAME := arm-none-eabi-size
+-    else
+-        $(call show_config_variable,SIZE_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef NM_NAME
+-    NM_NAME := $(call PARSE_OPENCM,$(BOARD_TAG),build.command.nm)
+-    ifndef NM_NAME
+-        NM_NAME := arm-none-eabi-nm
+-    else
+-        $(call show_config_variable,NM_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef OBJCOPY_NAME
+-    OBJCOPY_NAME := $(call PARSE_OPENCM,$(BOARD_TAG),build.command.objcopy)
+-    ifndef OBJCOPY_NAME
+-        OBJCOPY_NAME := arm-none-eabi-objcopy
+-    else
+-        $(call show_config_variable,OBJCOPY_NAME,[COMPUTED])
+-    endif
+-endif
++TOOL_PREFIX = arm-none-eabi
+ 
+ # processor stuff
+ ifndef MCU
+-    MCU := $(call PARSE_OPENCM,$(BOARD_TAG),build.family)
++    MCU := $(call PARSE_BOARD,$(BOARD_TAG),build.family)
+ endif
+ 
+ ifndef MCU_FLAG_NAME
+@@ -161,20 +86,20 @@ ifndef USB_TYPE
+     USB_TYPE = USB_SERIAL
+ endif
+ 
+-CPPFLAGS += -DBOARD_$(call PARSE_OPENCM,$(BOARD_TAG),build.board)
+-CPPFLAGS += -DMCU_$(call PARSE_OPENCM,$(BOARD_TAG),build.mcu)
++CPPFLAGS += -DBOARD_$(call PARSE_BOARD,$(BOARD_TAG),build.board)
++CPPFLAGS += -DMCU_$(call PARSE_BOARD,$(BOARD_TAG),build.mcu)
+ CPPFLAGS += -DSTM32_MEDIUM_DENSITY -DVECT_TAB_FLASH
+ 
+-CPPFLAGS += $(call PARSE_OPENCM,$(BOARD_TAG),build.option)
++CPPFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.option)
+ 
+ CXXFLAGS += -fno-rtti
+ 
+-CXXFLAGS += $(call PARSE_OPENCM,$(BOARD_TAG),build.cppoption)
+-ifeq ("$(call PARSE_OPENCM,$(BOARD_TAG),build.gnu0x)","true")
++CXXFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.cppoption)
++ifeq ("$(call PARSE_BOARD,$(BOARD_TAG),build.gnu0x)","true")
+     CXXFLAGS_STD += -std=gnu++0x
+ endif
+ 
+-ifeq ("$(call PARSE_OPENCM,$(BOARD_TAG),build.elide_constructors)", "true")
++ifeq ("$(call PARSE_BOARD,$(BOARD_TAG),build.elide_constructors)", "true")
+     CXXFLAGS += -felide-constructors
+ endif
+ 
+@@ -209,7 +134,7 @@ ifeq ($(CURRENT_OS), WINDOWS)
+ else
+     override AVRDUDE_ARD_OPTS = $(call get_monitor_port)
+ endif
+-	
++
+ override AVRDUDE_UPLOAD_HEX = $(TARGET_HEX)
+ 
+ ########################################################################
+diff --git a/OpenCR.mk b/OpenCR.mk
+new file mode 100644
+index 0000000..da97dc8
+--- /dev/null
++++ b/OpenCR.mk
+@@ -0,0 +1,273 @@
++########################################################################
++#
++# Support for Robotis OpenCR boards 
++#
++# Written by Dowhan Jeong, EunJin Jeong
++#
++# Based on work that is copyright Jeremy Shaw, Sudar, Nicholas Zambetti,
++# David A. Mellis & Hernando Barragan.
++#
++# This file is free software; you can redistribute it and/or modify it
++# under the terms of the GNU Lesser General Public License as
++# published by the Free Software Foundation; either version 2.1 of the
++# License, or (at your option) any later version.
++#
++########################################################################
++
++ifndef ARDUINO_DIR
++echo $(error ARDUINO_DIR should be specified)
++endif
++
++ifndef BOARD_TAG
++echo $(error BOARD_TAG should be specified. check board list with 'make show_boards')
++endif
++
++ifndef ARDMK_DIR
++    ARDMK_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
++endif
++
++include $(ARDMK_DIR)/Common.mk
++
++ifndef ARDUINO_PACKAGE_DIR
++    # attempt to find based on Linux, macOS and Windows default
++    ARDUINO_PACKAGE_DIR := $(firstword \
++        $(call dir_if_exists,$(HOME)/.arduino15/packages) \
++        $(call dir_if_exists,$(ARDUINO_DIR)/packages) \
++        $(call dir_if_exists,$(HOME)/Library/Arduino15/packages) \
++        $(call dir_if_exists,$(realpath $(USERPROFILE))/AppData/Local/Arduino15/packages) )
++    $(call show_config_variable,ARDUINO_PACKAGE_DIR,[AUTODETECTED],(from DEFAULT))
++else
++    $(call show_config_variable,ARDUINO_PACKAGE_DIR,[USER])
++endif
++
++ifndef ARDMK_VENDOR
++    ARDMK_VENDOR         = OpenCR
++endif
++
++ifndef ARCHITECTURE
++    ARCHITECTURE := OpenCR
++endif
++
++ifndef CORE_VER
++    CORE_VER := $(wildcard $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/hardware/$(ARCHITECTURE)/1.*)
++    ifneq ($(CORE_VER),)
++        CORE_VER := $(shell basename $(CORE_VER))
++        $(call show_config_variable,CORE_VER,[AUTODETECTED],(from ARDUINO_PACKAGE_DIR))
++    endif
++else
++    $(call show_config_variable,CORE_VER,[USER])
++endif
++
++ARCHITECTURE := sam
++
++arduino_output =
++# When output is not suppressed and we're in the top-level makefile,
++# running for the first time (i.e., not after a restart after
++# regenerating the dependency file), then output the configuration.
++ifndef ARDUINO_QUIET
++    ifeq ($(MAKE_RESTARTS),)
++        ifeq ($(MAKELEVEL),0)
++            arduino_output = $(info $(1))
++        endif
++    endif
++endif
++
++# Arduino Settings (will get shown in Arduino.mk as computed)
++ifndef ALTERNATE_CORE_PATH
++    ifdef CORE_VER
++	ALTERNATE_CORE_PATH = $(ARDUINO_PACKAGE_DIR)/OpenCR/hardware/OpenCR/$(CORE_VER)
++    else
++	    echo $(error  Cannot find $(CORE_VER). Check directory settings.)
++    endif
++endif
++
++ifndef ARDUINO_CORE_PATH
++        ARDUINO_CORE_PATH= $(ALTERNATE_CORE_PATH)/cores/arduino
++endif
++
++ifndef BOARDS_TXT
++        BOARDS_TXT= $(ALTERNATE_CORE_PATH)/boards.txt
++endif
++
++ifndef VARIANT
++    VARIANT := $(call PARSE_BOARD,$(BOARD_TAG),build.variant)
++endif
++
++ARDUINO_VAR_PATH = $(ALTERNATE_CORE_PATH)/variants/$(VARIANT)
++
++
++# Check boards file exists before continuing as parsing non-existant file can create problems
++ifneq ($(findstring boards.txt, $(wildcard $(ALTERNATE_CORE_PATH)/*.txt)), boards.txt)
++    echo $(error $(CORE_VER) Cannot find boards file $(BOARDS_TXT). Check ?? and board support installed)
++endif
++
++# grab any sources in the variant core path.
++# directorys were manually checked.
++# Core sources(used to generate libcore.a archive)
++OPENCR_CORE_C_SRCS_1 := $(wildcard $(ARDUINO_CORE_PATH)/avr/*.c)
++OPENCR_CORE_C_SRCS_2 := $(wildcard $(ARDUINO_CORE_PATH)/*.c)
++OPENCR_CORE_CPP_SRCS := $(wildcard $(ARDUINO_CORE_PATH)/*.cpp)
++
++# library sources
++OPENCR_LIB_C_SRCS_1 := $(wildcard $(ARDUINO_VAR_PATH)/bsp/opencr/*.c)
++OPENCR_LIB_C_SRCS_2 := $(wildcard $(ARDUINO_VAR_PATH)/hw/*.c)
++OPENCR_LIB_C_SRCS_3 := $(wildcard $(ARDUINO_VAR_PATH)/hw/driver/*.c)
++OPENCR_LIB_C_SRCS_4 := $(wildcard $(ARDUINO_VAR_PATH)/hw/usb_cdc/*.c)
++OPENCR_LIB_C_SRCS_5 := $(wildcard $(ARDUINO_VAR_PATH)/lib/STM32F7xx_HAL_Driver/Src/*.c)
++OPENCR_LIB_CPP_SRCS := $(wildcard $(ARDUINO_VAR_PATH)/*.cpp)
++OPENCR_LIB_S_SRCS := $(wildcard $(ARDUINO_VAR_PATH)/bsp/opencr/startup/*.S)
++
++ifndef F_CPU
++    F_CPU := $(call PARSE_BOARD,$(BOARD_TAG),build.f_cpu)
++endif
++
++OPENCR_LIB_OBJ_FILES = $(notdir $(OPENCR_LIB_C_SRCS_1:.c=.c.o)) $(notdir $(OPENCR_LIB_C_SRCS_2:.c=.c.o)) $(notdir $(OPENCR_LIB_C_SRCS_3:.c=.c.o)) $(notdir $(OPENCR_LIB_C_SRCS_4:.c=.c.o)) $(notdir $(OPENCR_LIB_C_SRCS_5:.c=.c.o)) $(notdir $(OPENCR_LIB_CPP_SRCS:.cpp=.cpp.o)) $(notdir $(OPENCR_LIB_S_SRCS:.S=.S.o))
++    OTHER_OBJS = $(patsubst %, \
++	   $(OBJDIR)/OpenCRlib/%, $(OPENCR_LIB_OBJ_FILES)) 
++
++OPENCR_CORE_OBJ_FILES = $(notdir $(OPENCR_CORE_C_SRCS_1:.c=.c.o)) $(notdir $(OPENCR_CORE_C_SRCS_2:.c=.c.o)) $(notdir $(OPENCR_CORE_CPP_SRCS:.cpp=.cpp.o))
++# override is used since opencr dosen't need other sam core objects
++override CORE_OBJS = $(patsubst %, \
++			 $(OBJDIR)/core/%, $(OPENCR_CORE_OBJ_FILES))
++
++ifndef AVR_TOOLS_DIR
++	AVR_TOOLS_DIR = $(call dir_if_exists,$(ARDUINO_PACKAGE_DIR)/OpenCR/tools/opencr_gcc/5.4.0-2016q2)
++endif
++ifeq ($(strip $(AVR_TOOLS_DIR)),)
++    echo $(error $(AVR_TOOLS_DIR) Cannot find AVR_TOOLS_DIR. Check AVR_TOOLS_DIR)
++endif
++
++# Robotis OpenCR platform library directory
++ifndef ARDUINO_PLATFORM_LIB_PATH
++    ARDUINO_PLATFORM_LIB_PATH = $(ALTERNATE_CORE_PATH)/libraries
++    $(call show_config_variable,ARDUINO_PLATFORM_LIB_PATH,[COMPUTED],(from OPENCR_DIR))
++endif
++
++########################################################################
++# command names
++
++TOOL_PREFIX = arm-none-eabi
++
++# processor stuff
++ifndef MCU
++    MCU := $(call PARSE_BOARD,$(BOARD_TAG),build.mcu)
++endif
++
++ifndef MCU_FLAG_NAME
++    MCU_FLAG_NAME=mcpu
++endif
++
++########################################################################
++# FLAGS
++ifndef USB_TYPE
++    USB_TYPE = USB_SERIAL
++endif
++
++# from platform.txt
++CPPFLAGS += -DARDUINO_OpenCR
++CPPFLAGS += -DARDUINO_ARCH_OPENCR
++
++CPPFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.common_flags)
++
++OPENCR_COMPILER_LIBS_C_FLAGS +=-I$(ARDUINO_VAR_PATH)/$(call PARSE_BOARD,$(BOARD_TAG),build.inc1)
++OPENCR_COMPILER_LIBS_C_FLAGS +=-I$(ARDUINO_VAR_PATH)/$(call PARSE_BOARD,$(BOARD_TAG),build.inc2)
++OPENCR_COMPILER_LIBS_C_FLAGS +=-I$(ARDUINO_VAR_PATH)/$(call PARSE_BOARD,$(BOARD_TAG),build.inc3)
++OPENCR_COMPILER_LIBS_C_FLAGS +=-I$(ARDUINO_VAR_PATH)/$(call PARSE_BOARD,$(BOARD_TAG),build.inc4)
++OPENCR_COMPILER_LIBS_C_FLAGS +=-I$(ARDUINO_VAR_PATH)/$(call PARSE_BOARD,$(BOARD_TAG),build.inc5)
++OPENCR_COMPILER_LIBS_C_FLAGS +=-I$(ARDUINO_VAR_PATH)/$(call PARSE_BOARD,$(BOARD_TAG),build.inc6)
++OPENCR_COMPILER_LIBS_C_FLAGS +=-I$(ARDUINO_VAR_PATH)/$(call PARSE_BOARD,$(BOARD_TAG),build.inc7)
++CPPFLAGS += $(OPENCR_COMPILER_LIBS_C_FLAGS)
++
++CFLAGS_STD += -c -g -O2 -std=gnu11 -mfloat-abi=softfp -mfpu=fpv5-sp-d16 -Wall -Wextra -DDEBUG_LEVEL=DEBUG_ALL -MMD -ffunction-sections -fdata-sections -nostdlib --param max-inline-insns-single=500 -DBOARD_$(VARIANT)
++
++CXXFLAGS_STD += -c -g -O2 -std=gnu++11 -mfloat-abi=softfp -mfpu=fpv5-sp-d16  -Wall -Wextra -DDEBUG_LEVEL=DEBUG_ALL -MMD -ffunction-sections -fdata-sections -nostdlib --param max-inline-insns-single=500 -fno-rtti -fno-exceptions -DBOARD_$(VARIANT)
++
++ASFLAGS += -c -g -x assembler-with-cpp -MMD
++
++LDFLAGS += -lm -lgcc -mthumb -Wl,--cref -Wl,--check-sections -Wl,--gc-sections -Wl,--unresolved-symbols=report-all -Wl,--warn-common -Wl,--warn-unresolved-symbols -Wl,--start-group -Wl,--whole-archive
++
++LINKER_SCRIPTS = -T$(ARDUINO_VAR_PATH)/bsp/opencr/ldscript/opencr_flash.ld
++########################################################################
++# Reset is handled by upload script. OpenCR don't neet reset command.
++override RESET_CMD = 
++
++########################################################################
++# Object conversion & uploading magic, modified from Arduino.mk
++override TARGET_HEX = $(OBJDIR)/$(TARGET).bin
++
++override avr_size = $(SIZE) --target=binary $(2)
++
++# Define UPLOAD_TOOL as avrdude to use avrdude upload recipe in Arduino.mk
++override UPLOAD_TOOL = avrdude
++
++ifeq ($(CURRENT_OS), WINDOWS)
++    override AVRDUDE = $(ARDUINO_PACKAGE_DIR)/OpenCR/tools/opencr_tools/1.0.0/win/opencr_ld.exe
++else
++    override AVRDUDE = $(ARDUINO_PACKAGE_DIR)/OpenCR/tools/opencr_tools/1.0.0/linux/opencr_ld
++endif
++override AVRDUDE_COM_OPTS = $(DEVICE_PATH) 
++override AVRDUDE_ISP_OPTS = 115200 $(TARGET_HEX) 1
++override AVRDUDE_ISPLOAD_OPTS = 
++
++########################################################################
++# automatically include Arduino.mk
++
++include $(ARDMK_DIR)/Arduino.mk
++
++########################################################################
++
++# OpenCR core files
++$(OBJDIR)/core/%.c.o: $(ARDUINO_CORE_PATH)/avr/%.c $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
++
++$(OBJDIR)/core/%.c.o: $(ARDUINO_CORE_PATH)/%.c $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
++
++$(OBJDIR)/core/%.cpp.o: $(ARDUINO_CORE_PATH)/%.cpp $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CXX) -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
++
++# OpenCR lib files
++$(OBJDIR)/OpenCRlib/%.c.o: $(ARDUINO_VAR_PATH)/bsp/opencr/%.c $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
++$(OBJDIR)/OpenCRlib/%.c.o: $(ARDUINO_VAR_PATH)/hw/%.c $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
++
++$(OBJDIR)/OpenCRlib/%.c.o: $(ARDUINO_VAR_PATH)/hw/driver/%.c $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
++
++$(OBJDIR)/OpenCRlib/%.c.o: $(ARDUINO_VAR_PATH)/hw/usb_cdc/%.c $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
++
++$(OBJDIR)/OpenCRlib/%.c.o: $(ARDUINO_VAR_PATH)/lib/STM32F7xx_HAL_Driver/Src/%.c $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
++
++$(OBJDIR)/OpenCRlib/%.cpp.o: $(ARDUINO_VAR_PATH)/%.cpp $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CXX) -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
++
++$(OBJDIR)/OpenCRlib/%.S.o: $(ARDUINO_VAR_PATH)/bsp/opencr/startup/%.S $(COMMON_DEPS) | $(OBJDIR)
++	@$(MKDIR) $(dir $@)
++	$(CC) -MMD -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
++
++# Object conversion & uploading magic, modified from Arduino.mk
++$(OBJDIR)/%.bin: $(OBJDIR)/%.elf $(COMMON_DEPS)
++	@$(MKDIR) $(dir $@)
++	$(OBJCOPY) -v -Obinary $< $@
++	@$(ECHO) '\n'
++	$(call avr_size,$<,$@)
++ifneq ($(strip $(HEX_MAXIMUM_SIZE)),)
++	@if [ `$(SIZE) --target=binary $@ | awk 'FNR == 2 {print $$2}'` -le $(HEX_MAXIMUM_SIZE) ]; then touch $@.sizeok; fi
++else
++	@$(ECHO) "Maximum flash memory of $(BOARD_TAG) is not specified. Make sure the size of $@ is less then $(BOARD_TAG)\'s flash memory"
++	@touch $@.sizeok
++endif
++
++CORE_LIB += -Wl,--no-whole-archive -lstdc++
+diff --git a/README.md b/README.md
+index 7ea5c0b..cab5d19 100644
+--- a/README.md
++++ b/README.md
+@@ -7,8 +7,11 @@ This is a very simple Makefile which knows how to build Arduino sketches. It def
+ - Very robust
+ - Highly customizable
+ - Supports all official AVR-based Arduino boards
++- Supports official ARM-based Arduino boards using Atmel SAM chip family
++and includes on-device debugging targets.
+ - Supports chipKIT
+ - Supports Teensy 3.x (via Teensyduino)
++- Supports Robotis OpenCR 1.0
+ - Works on all three major OS (Mac, Linux, Windows)
+ - Auto detects serial baud rate and libraries used
+ - Support for `*.ino` and `*.pde` sketches as well as raw `*.c` and `*.cpp`
+@@ -51,10 +54,10 @@ $ brew install --HEAD arduino-mk
+ #### Arch Linux
+ 
+ Arch Linux users can use the unofficial AUR package [arduino-mk](https://aur.archlinux.org/packages/arduino-mk/).
+-It can be installed using the following command.
++It can be installed with [AUR] helper using the following command.
+ 
+ ```sh
+-yaourt -S arduino-mk
++yay -S arduino-mk
+ ```
+ 
+ #### Fedora
+@@ -114,6 +117,12 @@ On openSUSE:
+ zypper install python-serial
+ ```
+ 
++On Arch:
++
++```sh
++sudo pacman -S python-pyserial
++```
++
+ On Mac using MacPorts:
+ 
+ ```sh
+@@ -122,13 +131,12 @@ sudo port install py27-serial
+ 
+ On Windows:
+ 
+-You need to install Cygwin and its packages for Make, Perl and the following Serial library.
++You need to install Cygwin and its packages for Make, Perl, Python2 and the following Serial library.
+ 
+ Assuming you included Python in your Cygwin installation:
+ 
+ 1. download PySerial source package from [https://pypi.python.org/pypi/pyserial](https://pypi.python.org/pypi/pyserial)
+-2. extract downloaded package running
+-```tar xvzf dowloaded_package_name.tar.gz```
++2. extract downloaded package running `tar xvzf dowloaded_package_name.tar.gz`
+ 3. navigate to extracted package folder
+ 4. build and install Python module: 
+  
+@@ -137,6 +145,16 @@ python setup.py build
+ python setup.py install
+ ```
+ 
++Alternatively, if you have setup Cygwin to use a Windows Python installation,
++simply install using pip:
++
++```
++pip install pyserial
++```
++
++Arduino-Makefile should automatically detect the Python installation type and
++use the correct device port binding.
++
+ ## Usage
+ 
+ Download a copy of this repo somewhere to your system or install it through a package by following the above installation instruction.
+@@ -144,7 +162,7 @@ Download a copy of this repo somewhere to your system or install it through a pa
+ Sample makefiles are provided in the `examples/` directory.  E.g. [Makefile-example](examples/MakefileExample/Makefile-example.mk) demonstrates some of the more advanced options,
+ whilst [Blink](examples/Blink/Makefile) demonstrates the minimal settings required for various boards like the Uno, Nano, Mega, Teensy, ATtiny etc.
+ 
+-MAC:
++### Mac
+ 
+ On the Mac with IDE 1.0 you might want to set:
+ 
+@@ -158,24 +176,28 @@ On the Mac with IDE 1.0 you might want to set:
+ 
+ On the Mac with IDE 1.5+ it's like above but with
+ 
+-```
++```make
+     ARDUINO_DIR   = /Applications/Arduino.app/Contents/Java
+ ```
+-LINUX:
++### Linux
+ 
+ You can either declare following variables in your project's makefile or set them as environmental variables.
+ 
++```make
+     ARDUINO_DIR – Directory where Arduino is installed
+     ARDMK_DIR – Directory where you have copied the makefile
+     AVR_TOOLS_DIR – Directory where avr tools are installed
++```
+ 
+ Keep in mind, that Arduino 1.5.x+ comes with it's own copy of avr tools which you can leverage in your build process here.
+ 
+ Example of  ~/.bashrc file:
+ 
+-	export ARDUINO_DIR=/home/sudar/apps/arduino-1.0.5
+-	export ARDMK_DIR=/home/sudar/Dropbox/code/Arduino-Makefile
+-	export AVR_TOOLS_DIR=/usr/include
++```make
++    export ARDUINO_DIR=/home/sudar/apps/arduino-1.0.5
++    export ARDMK_DIR=/home/sudar/Dropbox/code/Arduino-Makefile
++    export AVR_TOOLS_DIR=/usr/include
++```
+ 
+ Example of the project's make file:
+ 
+@@ -184,66 +206,79 @@ Example of the project's make file:
+     MONITOR_PORT  = /dev/ttyACM0
+ ```
+ 
+-WINDOWS:
++### Windows
+ 
+-On Windows (using cygwin), you might want to set:
++On Windows (using Cygwin), you might want to set:
+ 
+ ```make
+-    ARDUINO_DIR   = ../../arduino
++    # Symbolic link to Arduino installation directory - see below
++    ARDUINO_DIR   = C:/Arduino
+     ARDMK_DIR     = path/to/mkfile
+     MONITOR_PORT  = com3
+     BOARD_TAG     = mega2560
+ ```
+ 
++**NOTE: Use forward slash not backslash and there should be no spaces or
++special characters in the Windows paths (due to Win/Unix crossover). The paths
++should not be *cygdrive* paths.**
++
+ On Windows (using MSYS and PuTTY), you might want to set the following extra parameters:
+ 
+ ```make
+     MONITOR_CMD   = putty
+-    MONITOR_PARMS = 8,1,n,N
++    MONITOR_PARAMS = 8,1,n,N
+ ```
+ 
+ On Arduino 1.5+ installs, you should set the architecture to either `avr` or `sam` and if using a submenu CPU type, then also set that:
+ 
+ ```make
+-	ARCHITECTURE  = avr
++    ARCHITECTURE  = avr
+     BOARD_TAG     = atmegang
+     BOARD_SUB     = atmega168
+ ```
+ 
+-It is recommended in Windows that you create a symbolic link to avoid problems with file naming conventions on Windows. For example, if your your Arduino directory is in:
++#### Symbolic Link
++
++It is recommended in Windows that you create a symbolic link to avoid problems with file naming conventions on Windows; unless one installs to a non-default location. For example, if your your Arduino directory is in:
+ 
+-    c:\Program Files (x86)\Arduino
++    C:\Program Files (x86)\Arduino
+ 
+ You will get problems with the special characters on the directory name. More details about this can be found in [issue #94](https://github.com/sudar/Arduino-Makefile/issues/94)
+ 
+ To create a symbolic link, you can use the command “mklink” on Windows, e.g.
+ 
+ ```sh
+-    mklink /d c:\Arduino c:\Program Files (x86)\Arduino
++mklink /d C:\Arduino C:\Program Files (x86)\Arduino
++```
++Alternatively if you've setup Cygwin hard symbolic links ([CYGWIN=winsymlinks:native](https://www.cygwin.com/cygwin-ug-net/using-cygwinenv.html)):
++
++```sh
++ln -s /cygdrive/c/Program Files\ \(x86\)/Arduino/ C:/Arduino
+ ```
+ 
+ After which, the variables should be:
+ 
+ ```make
+-    ARDUINO_DIR=../../../../../Arduino
++    ARDUINO_DIR=C:/Arduino
+ ```
+ 
+ Instead of:
+ 
+ ```make
+-    ARDUINO_DIR=../../../../../Program\ Files\ \(x86\)/Arduino
++    ARDUINO_DIR=C:/Program\ Files\ \(x86\)/Arduino
+ ```
+ 
+-Usefull Variables:
++### Useful Variables
+ 
+ The list of all variables that can be overridden is available at [arduino-mk-vars.md](arduino-mk-vars.md) file.
+ 
+ - `BOARD_TAG` - Type of board, for a list see boards.txt or `make show_boards`
+ - `MONITOR_PORT` - The port where your Arduino is plugged in, usually `/dev/ttyACM0` or `/dev/ttyUSB0` in Linux or Mac OS X and `com3`, `com4`, etc. in Windows.
+-- `ARDUINO_DIR` - Path to Arduino installation. In Cygwin in Windows this path must be
+-  relative, not absolute (e.g. "../../arduino" and not "/c/cygwin/Arduino").
+-- `ARDMK_DIR`   - Path where the `*.mk` are present. If you installed the package, then it is usually `/usr/share/arduino`
+-- `AVR_TOOLS_DIR` - Path where the avr tools chain binaries are present. If you are going to use the binaries that came with Arduino installation, then you don't have to set it. Otherwise set it realtive and not absolute.
++- `ARDUINO_DIR` - Path to Arduino installation. Using Windows with Cygwin,
++  this path must use Unix / and not Windows \\ (eg "C:/Arduino" not
++  "C:\\Arduino).
++- `ARDMK_DIR`   - Path where the `*.mk` are present. If you installed the package, then it is usually `/usr/share/arduino`. On Windows, this should be a path without spaces and no special characters, it can be a *cygdrive* path if necessary and must use / not \\.
++- `AVR_TOOLS_DIR` - Path where the avr tools chain binaries are present. If you are going to use the binaries that came with Arduino installation, then you don't have to set it. Otherwise set it relative and not absolute.
+ 
+ 
+ 
+@@ -287,6 +322,72 @@ See examples/BlinkOpenCM for example usage.
+ 
+ For large Robotis projects, [libmaple](https://github.com/Rhoban/Maple) may be more appropriate, as the OpenCM IDE uses a very old compiler release.
+ 
++## Arduino ARM Boards
++
++For Arduino boards using ARM architechure, specifically the Atmel SAM series
++((SAM3X8E) Due; (SAMD21) Arduino M0 [Pro], Zero, MKR1000, Feather M0, etc.), first
++install the board support package from the IDE or other distribution channels.
++
++Define`ARDUINO_PACKAGE_DIR` as the root path containing the ARM support
++package (the manufacturer folder) and the `BOARD_TAG` (see `make show_boards`
++for help) within your project Makefile. Include 'Sam.mk' rather than
++  'Arduino.mk' at the end of your file - see examples/ZeroBlink,
++  examples/MZeroBlink and examples/DueBlink for example usage.
++
++**Note**: The Arduino IDE does not install board support packages to
++the base Arduino installation directory (the directory that will work with AVR
++Makefiles). They are generally installed to a '.arduino15/packages' folder in
++the users home directory. This is the reason for the new `ARDUINO_PACKAGE_DIR`
++define. On Windows, the package directory is often in the user home directory
++so advice is to create a symblic link to avoid slash/space in path problems.
++You can also manually install support packages in your Sketchbook 'hardware'
++folder, then define ARDUINO_PACKAGE_DIR as this path.
++
++If using a SAM board from a manufacturer other than Arduino, one must still
++install the Arduino board support as above (unless using externally defined
++toolchain) and then define the location of the manufacturer board support core
++using the ALTERNATIVE_CORE_PATH define. For example: `ALTERNATE_CORE_PATH =
++$(ARDUINO_SKETCHBOOK)/hardware/sparkfun/samd`
++
++The programing method will auto-detect based on the `BOARD_TAG` settings read
++from boards.txt:
++
++Programming using OpenOCD CMSIS-DAP with the Programming/debug USB is
++currently supported (the same method used by the IDE), including burning
++bootloaders. External CMSIS tools such as Atmel Ice will also work with this
++method. Black Magic Probe (BMP) support is also included using GDB for both
++uploading and debugging.
++
++Native USB programing using Bossa (Due, Zero, MKR1000, Feather style bootloaders)
++and avrdude (M0 bootloaders) is supported. The bootloaders on these devices
++requires a double press of the reset button or open/closing the serial port at
++1200 BAUD. The automatic entry of the bootloader is attempted using
++`ard-reset-arduino` when using the general `make upload` target by polling
++attached devices until the bootloader port re-attaches (same method as the
++IDE). On Windows, the USB enumerates as differnt COM ports for the CDC Serial
++and bootloader and these must be defined. On encountering problems, one can
++manually enter the bootloader then upload using the `make raw_upload` target.
++Note that the `make reset` target will enter the bootloader on these devices;
++there is no way to reset over USB.
++
++If using system installed tools, be aware that `openocd` and `bossa` were
++orginally forked for Arduino support and system distributions may not be up
++to date with merged changes. `bossa` must be version 1.7->. `openocd` should
++work but there may be problems at run time
++[ref](https://github.com/pda/arduino-zero-without-ide). Ideally, use the
++support packaged version or compile and install the Arduino fork.
++
++With the ARM chipset and using a CMSIS-DAP tool, on-device debugging is made available:
++
++* `debug_init` and `debug` targets for on-device debugging using GDB. To use
++  this, one must start the GDB server with `make debug_init &`, followed by
++  connecting to the target with `make debug`. If using a Black Magic Probe,
++  one can just use `make debug`. At the moment, a system wide `arm-none-eabi-gdb` must be
++  installed as the one supplied with the Arduino toolchain
++  does not appear to work. 
++* Example usage: https://asciinema.org/a/Jarz7Pr3gD6mqaZvCACQBzqix
++* See the examples/MZeroBlink Makefile for a commented example.
++
+ ## Versioning
+ 
+ The current version of the makefile is `1.6.0`. You can find the full history in the [HISTORY.md](HISTORY.md) file
+@@ -306,9 +407,8 @@ Also checkout the [contribution guide](CONTRIBUTING.md) for more details.
+ 
+ If you are looking for ideas to work on, then check out the following TODO items or the [issue tracker](https://github.com/sudar/Arduino-Makefile/issues/).
+ 
+-## Limitations / Know Issues / TODO's
++## Limitations / Known Issues / TODO's
+ 
+-- Doesn't support SAM boards yet.
+ - Since it doesn't do any pre processing like Arduino IDE, you have to declare all methods before you use them ([issue #59](https://github.com/sudar/Arduino-Makefile/issues/59))
+ - More than one .ino or .pde file is not supported yet ([issue #49](https://github.com/sudar/Arduino-Makefile/issues/49))
+ - When you compile for the first time, it builds all libs inside Arduino directory even if it is not needed. But while linking only the relevant files are linked. ([issue #29](https://github.com/sudar/Arduino-Makefile/issues/29)). Even Arduino IDE does the same thing though.
+@@ -402,6 +502,20 @@ all of the examples. The bootstrap script is primarily intended for use by a
+ continuous integration server, specifically Travis CI. It is not intended for
+ normal users.
+ 
++## Makefile Generator and Project Initialisation
++
++`ardmk-init` within the bin/ folder is a utility Python script to create a
++Arduino-mk Makefile for a project and also has option to create a traditional *tree*
++organization (src, lib, bin). It can be used as with commanline arguments or
++prompted - see examples below (append `$ARDMK_DIR/bin/` to command if not on path):
++
++* Run prompted within current working directory: `ardmk-init`
++* Create Arduino Uno Makefile (useful within a library example): `ardmk-init -qb uno`
++* Create boilerplate Arduino Uno project in current working directory of same
++  name: `ardmk-init -b uno --quiet --project`
++* Create Arduino-mk nano Makefile in current working directory with template .ino: `ardmk-init -b nano -u atmega328 -qtn my-project`
++* See `ardmk-init --help` for more.
++
+ ### Bare-Arduino–Project
+ 
+ If you are planning on using this makefile in a larger/professional project, you might want to take a look at the [Bare-Arduino–Project](https://github.com/WeAreLeka/Bare-Arduino-Project) framework.
+diff --git a/Sam.mk b/Sam.mk
+new file mode 100644
+index 0000000..a014e63
+--- /dev/null
++++ b/Sam.mk
+@@ -0,0 +1,443 @@
++########################################################################
++#
++# Support for Arduino Atmel SAM boards (sam and samd)
++#
++# You must install a SAM board hardware support package (such as Arduino Zero)
++# to use this, then define ARDUINO_PACKAGE_DIR as the path to the root
++# directory containing the support package.
++#
++# 2018 John Whittington @j_whittington
++#
++########################################################################
++
++arduino_output =
++# When output is not suppressed and we're in the top-level makefile,
++# running for the first time (i.e., not after a restart after
++# regenerating the dependency file), then output the configuration.
++ifndef ARDUINO_QUIET
++    ifeq ($(MAKE_RESTARTS),)
++        ifeq ($(MAKELEVEL),0)
++            arduino_output = $(info $(1))
++        endif
++    endif
++endif
++
++ifndef ARDMK_DIR
++    ARDMK_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
++endif
++
++# include Common.mk now we know where it is
++ifndef COMMON_INCLUDED
++    include $(ARDMK_DIR)/Common.mk
++endif
++
++ifndef ARDUINO_PACKAGE_DIR
++    # attempt to find based on Linux, macOS and Windows default
++    ARDUINO_PACKAGE_DIR := $(firstword \
++        $(call dir_if_exists,$(HOME)/.arduino15/packages) \
++        $(call dir_if_exists,$(ARDUINO_DIR)/packages) \
++        $(call dir_if_exists,$(HOME)/Library/Arduino15/packages) \
++        $(call dir_if_exists,$(USERPROFILE)/AppData/Local/Arduino15/packages) )
++    $(call show_config_variable,ARDUINO_PACKAGE_DIR,[AUTODETECTED],(from DEFAULT))
++else
++    $(call show_config_variable,ARDUINO_PACKAGE_DIR,[USER])
++endif
++
++ifndef ARDMK_VENDOR
++    ARDMK_VENDOR := arduino
++endif
++
++ifndef ARCHITECTURE
++    ARCHITECTURE := samd
++endif
++
++ifndef CORE_VER
++    CORE_VER := $(wildcard $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/hardware/$(ARCHITECTURE)/1.*)
++    ifneq ($(CORE_VER),)
++        CORE_VER := $(shell basename $(CORE_VER))
++        $(call show_config_variable,CORE_VER,[AUTODETECTED],(from ARDUINO_PACKAGE_DIR))
++    endif
++else
++    $(call show_config_variable,CORE_VER,[USER])
++endif
++
++ifndef CMSIS_VER
++    CMSIS_VER := $(wildcard $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/tools/CMSIS/4.*)
++    ifneq ($(CMSIS_VER),)
++        CMSIS_VER := $(shell basename $(CMSIS_VER))
++        $(call show_config_variable,CMSIS_VER,[AUTODETECTED],(from ARDUINO_PACKAGE_DIR))
++    endif
++else
++    $(call show_config_variable,CMSIS_VER,[USER])
++endif
++
++ifndef CMSIS_ATMEL_VER
++    CMSIS_ATMEL_VER := $(wildcard $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/tools/CMSIS-Atmel/1.*)
++    ifneq ($(CMSIS_ATMEL_VER),)
++        CMSIS_ATMEL_VER := $(shell basename $(CMSIS_ATMEL_VER))
++        $(call show_config_variable,CMSIS_ATMEL_VER,[AUTODETECTED],(from ARDUINO_PACKAGE_DIR))
++    endif
++else
++    $(call show_config_variable,CMSIS_ATMEL_VER,[USER])
++endif
++
++ifndef CMSIS_DIR
++    ifeq ($(findstring samd, $(strip $(ARCHITECTURE))), samd)
++        CMSIS_DIR := $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/tools/CMSIS/$(CMSIS_VER)/CMSIS
++    else
++        CMSIS_DIR = $(ALTERNATE_CORE_PATH)/system/CMSIS/CMSIS
++    endif
++    $(call show_config_variable,CMSIS_DIR,[AUTODETECTED],(from ARDUINO_PACKAGE_DIR))
++else
++    $(call show_config_variable,CMSIS_DIR,[USER])
++endif
++
++ifndef CMSIS_ATMEL_DIR
++    ifeq ($(findstring samd, $(strip $(ARCHITECTURE))), samd)
++        CMSIS_ATMEL_DIR := $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/tools/CMSIS-Atmel/$(CMSIS_ATMEL_VER)/CMSIS
++    else
++        CMSIS_ATMEL_DIR = $(ALTERNATE_CORE_PATH)/system/CMSIS
++    endif
++    $(call show_config_variable,CMSIS_ATMEL_DIR,[AUTODETECTED],(from ARDUINO_PACKAGE_DIR))
++else
++    $(call show_config_variable,CMSIS_ATMEL_DIR,[USER])
++endif
++
++# Arduino Settings (will get shown in Arduino.mk as computed)
++ifndef ALTERNATE_CORE_PATH
++    ifdef CORE_VER
++        ALTERNATE_CORE_PATH = $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/hardware/$(ARCHITECTURE)/$(CORE_VER)
++    else
++        ALTERNATE_CORE_PATH = $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/hardware/$(ARCHITECTURE)
++    endif
++endif
++ifndef ARDUINO_CORE_PATH
++    ARDUINO_CORE_PATH   = $(ALTERNATE_CORE_PATH)/cores/arduino
++endif
++ifndef BOARDS_TXT
++    BOARDS_TXT          = $(ALTERNATE_CORE_PATH)/boards.txt
++endif
++
++# Check boards file exists before continuing as parsing non-existant file can create problems
++ifneq ($(findstring boards.txt, $(wildcard $(ALTERNATE_CORE_PATH)/*.txt)), boards.txt)
++    echo $(error $(CORE_VER) Cannot find boards file $(BOARDS_TXT). Check ARDUINO_PACKAGE_DIR path: $(ARDUINO_PACKAGE_DIR) and board support installed)
++endif
++
++# add CMSIS includes
++CPPFLAGS += -I$(CMSIS_DIR)/Include/
++CPPFLAGS += -I$(CMSIS_ATMEL_DIR)/Device/ATMEL
++# path for Cortex library
++LIB_PATH  =  $(CMSIS_DIR)/Lib/GCC
++BOOTLOADER_PARENT = $(ALTERNATE_CORE_PATH)/bootloaders
++
++ifndef VARIANT
++    VARIANT := $(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).build.variant)
++    ifndef VARIANT
++        VARIANT := $(call PARSE_BOARD,$(BOARD_TAG),build.variant)
++    endif
++endif
++
++# grab any sources in the variant core path (variant.cpp defines pin/port mapping on SAM devices)
++ifndef SAM_CORE_PATH
++    SAM_CORE_PATH := $(ALTERNATE_CORE_PATH)/variants/$(VARIANT)
++endif
++SAM_CORE_C_SRCS := $(wildcard $(SAM_CORE_PATH)/*.c)
++SAM_CORE_CPP_SRCS := $(wildcard $(SAM_CORE_PATH)/*.cpp)
++SAM_CORE_S_SRCS := $(wildcard $(SAM_CORE_PATH)/*.S)
++
++# due/sam specific paths hard define chip type for SystemInit function in system_CHIP.c as not included in core like samd
++ifeq ($(findstring arduino_due, $(strip $(VARIANT))), arduino_due)
++    ifndef SAM_SYSTEM_PATH
++        SAM_SYSTEM_PATH := $(CMSIS_ATMEL_DIR)/Device/ATMEL/sam3xa
++    endif
++    ifndef SAM_LIBSAM_PATH
++        SAM_LIBSAM_PATH := $(ALTERNATE_CORE_PATH)/system/libsam
++    endif
++    CPPFLAGS += -I$(SAM_SYSTEM_PATH)/include
++    CPPFLAGS += -I$(SAM_LIBSAM_PATH)
++    CPPFLAGS += -I$(SAM_LIBSAM_PATH)/include
++    SAM_CORE_C_SRCS += $(wildcard $(SAM_LIBSAM_PATH)/source/*.c)
++    SAM_CORE_C_SRCS += $(wildcard $(SAM_SYSTEM_PATH)/source/*.c)
++endif
++
++# Use arm-toolchain from Arduino install if exists and user has not defined global version
++ifndef ARM_TOOLS_DIR
++    ARM_TOOLS_DIR = $(call dir_if_exists,$(wildcard $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/tools/$(TOOL_PREFIX)-gcc/*))
++    $(call show_config_variable,ARM_TOOLS_DIR,[COMPUTED],(from ARDUINO_PACKAGE_DIR))
++else
++    $(call show_config_variable,ARM_TOOLS_DIR,[USER])
++endif
++
++# define plaform lib dir from Arduino ARM support
++ifndef ARDUINO_PLATFORM_LIB_PATH
++    ARDUINO_PLATFORM_LIB_PATH := $(ALTERNATE_CORE_PATH)/libraries
++    $(call show_config_variable,ARDUINO_PLATFORM_LIB_PATH,[COMPUTED],(from ARDUINO_PACKAGE_DIR))
++endif
++
++########################################################################
++# command names
++
++TOOL_PREFIX = arm-none-eabi
++
++ifndef GDB_NAME
++    GDB_NAME := $(call PARSE_BOARD,$(BOARD_TAG),build.command.gdb)
++    ifndef GDB_NAME
++        GDB_NAME := $(TOOL_PREFIX)-gdb
++    else
++        $(call show_config_variable,GDB_NAME,[COMPUTED])
++    endif
++endif
++
++ifndef UPLOAD_TOOL
++    UPLOAD_TOOL := $(call PARSE_BOARD,$(BOARD_TAG),upload.tool)
++    ifndef UPLOAD_TOOL
++        UPLOAD_TOOL := openocd
++    else
++        $(call show_config_variable,UPLOAD_TOOL,[COMPUTED])
++    endif
++endif
++
++ifndef BOOTLOADER_UPLOAD_TOOL
++    BOOTLOADER_UPLOAD_TOOL := $(call PARSE_BOARD,$(BOARD_TAG),bootloader.tool)
++    ifndef BOOTLOADER_UPLOAD_TOOL
++        BOOTLOADER_UPLOAD_TOOL := openocd
++    else
++        $(call show_config_variable,BOOTLOADER_UPLOAD_TOOL,[COMPUTED])
++    endif
++endif
++
++# processor stuff
++ifndef MCU
++    MCU := $(call PARSE_BOARD,$(BOARD_TAG),build.mcu)
++endif
++
++ifndef MCU_FLAG_NAME
++    MCU_FLAG_NAME=mcpu
++endif
++
++# native port emulates an AVR chip to use AVRDUDE
++ifndef AVRDUDE_MCU
++    AVRDUDE_MCU := $(call PARSE_BOARD,$(BOARD_TAG),build.emu.mcu)
++endif
++
++# GDP settings
++ifndef GDB_PORT
++    # default to localhost default OpenOCD port
++    GDB_PORT = localhost:3333
++endif
++
++ifndef GDB_OPTS
++    # if using BMP do a scan and attach
++    ifeq ($(findstring /dev/tty, $(strip $(GDB_PORT))), /dev/tty)
++        GDB_OPTS = -ex "target extended-remote $(GDB_PORT)" -ex "monitor swdp_scan" -ex "attach 1" -ex "load" -d $(OBJDIR) $(TARGET_ELF)
++    else
++        GDB_OPTS = -ex "target extended-remote $(GDB_PORT)" -ex "load" -d $(OBJDIR) $(TARGET_ELF)
++    endif
++endif
++
++ifndef GDB_UPLOAD_OPTS
++    GDB_UPLOAD_OPTS = $(GDB_OPTS) -ex "set confirm off" -ex "set target-async off" -ex "set remotetimeout 30" -ex "detach" -ex "kill" -ex "quit"
++endif
++
++########################################################################
++# OpenOCD for SAM devices
++
++ifndef OPENOCD
++    BUNDLED_OPENOCD_DIR := $(call dir_if_exists,$(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/tools/openocd)
++    # Try Arduino support package first
++    ifdef BUNDLED_OPENOCD_DIR
++        OPENOCD_VER := $(shell basename $(wildcard $(BUNDLED_OPENOCD_DIR)/*))
++        OPENOCD = $(BUNDLED_OPENOCD_DIR)/$(OPENOCD_VER)/bin/openocd -s $(BUNDLED_OPENOCD_DIR)/$(OPENOCD_VER)/share/openocd/scripts/
++        $(call show_config_variable,OPENOCD,[AUTODETECTED],(from ARDUINO_PACKAGE_DIR))
++    else
++        # Otherwise look on user path
++        OPENOCD := $(shell which openocd 2>/dev/null)
++        ifdef OPENOCD
++            $(call show_config_variable,OPENOCD,[AUTODETECTED],(found in $$PATH))
++        endif
++    endif
++else
++    $(call show_config_variable,OPENOCD,[USER])
++endif
++
++ifndef OPENOCD_OPTS
++    OPENOCD_OPTS += -d2 -f $(ALTERNATE_CORE_PATH)/variants/$(VARIANT)/$(OPENOCD_SCRIPT)
++endif
++
++########################################################################
++# Bossa for SAM devices
++
++ifndef BOSSA
++    BUNDLED_BOSSA_DIR := $(call dir_if_exists,$(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/tools/bossac)
++    # Try Arduino support package first
++    ifdef BUNDLED_BOSSA_DIR
++        BOSSA_VER := $(shell basename $(wildcard $(BUNDLED_BOSSA_DIR)/*))
++        BOSSA = $(BUNDLED_BOSSA_DIR)/$(BOSSA_VER)/bossac
++        $(call show_config_variable,BOSSA,[AUTODETECTED],(from ARDUINO_PACKAGE_DIR))
++    else
++        # Otherwise look on user path
++        BOSSA := $(shell which bossac 2>/dev/null)
++        ifdef BOSSA
++            $(call show_config_variable,BOSSA,[AUTODETECTED],(found in $$PATH))
++        endif
++    endif
++else
++    $(call show_config_variable,BOSSA,[USER])
++endif
++
++ifndef BOSSA_OPTS
++    BOSSA_OPTS += -d --info --erase --write --verify --reset
++    # Arduino Due forces RS-232 mode and boots from flash
++    ifeq ($(findstring arduino_due, $(strip $(VARIANT))), arduino_due)
++        BOSSA_OPTS += -U false -b
++    endif
++endif
++
++get_bootloader = $(shell $(RESET_CMD) | tail -1)
++
++# if not bootloader port defined (ISP_PORT), automatically grab first port after reset
++# if not on windows
++ifndef ISP_PORT
++    ifeq ($(CURRENT_OS), WINDOWS)
++        BOSSA_OPTS += --port=$(COM_STYLE_MONITOR_PORT)
++    else
++        BOSSA_OPTS += --port=$(notdir $(call get_monitor_port))
++    endif
++else
++    BOSSA_OPTS += --port=$(ISP_PORT)
++endif
++
++########################################################################
++# EXECUTABLES
++# Define them here to use ARM_TOOLS_PATH and allow auto finding of AVR_TOOLS_PATH
++
++AVR_TOOLS_DIR := $(ARM_TOOLS_DIR)
++#GDB     = $(ARM_TOOLS_PATH)/$(GDB_NAME)
++# Use system gdb for now as Arduino supplied has lib error?
++GDB     = $(GDB_NAME)
++
++########################################################################
++# FLAGS
++
++ifndef USB_TYPE
++    USB_TYPE = USBCON
++endif
++
++ifndef USB_PRODUCT
++    USB_PRODUCT := $(call PARSE_BOARD,$(BOARD_TAG),build.usb_product)
++    ifdef USB_PRODUCT
++        $(call show_config_variable,USB_PRODUCT,[COMPUTED])
++    endif
++endif
++
++ifndef USB_MANUFACTURER
++    USB_MANUFACTURER := $(call PARSE_BOARD,$(BOARD_TAG),build.usb_manufacturer)
++    ifndef USB_MANUFACTURER
++        USB_MANUFACTURER = "Unknown"
++    else
++        $(call show_config_variable,USB_MANUFACTURER,[COMPUTED])
++    endif
++endif
++
++ifndef USB_VID
++    USB_VID := $(call PARSE_BOARD,$(BOARD_TAG),build.vid)
++    ifdef USB_VID
++        $(call show_config_variable,USB_VID,[COMPUTED])
++    endif
++endif
++
++ifndef USB_PID
++    USB_PID := $(call PARSE_BOARD,$(BOARD_TAG),build.pid)
++    ifdef USB_PID
++        $(call show_config_variable,USB_PID,[COMPUTED])
++    endif
++endif
++
++# Bootloader settings
++ifndef BOOTLOADER_SIZE
++    BOOTLOADER_SIZE := $(call PARSE_BOARD,$(BOARD_TAG),bootloader.size)
++    ifndef BOOTLOADER_SIZE
++        BOOTLOADER_SIZE := 0x2000
++    else
++        $(call show_config_variable,BOOTLOADER_SIZE,[COMPUTED])
++    endif
++endif
++
++ifndef BOOTLOADER_UNPROTECT
++    BOOTLOADER_UNPROTECT := $(call PARSE_BOARD,$(BOARD_TAG),bootloader.cmd_unprotect)
++    ifndef BOOTLOADER_UNPROTECT
++        BOOTLOADER_UNPROTECT := at91samd bootloader 0
++    else
++        $(call show_config_variable,BOOTLOADER_UNPROTECT,[COMPUTED])
++    endif
++endif
++
++ifndef BOOTLOADER_PROTECT
++    BOOTLOADER_PROTECT := $(call PARSE_BOARD,$(BOARD_TAG),bootloader.cmd_protect)
++    ifndef BOOTLOADER_PROTECT
++        BOOTLOADER_PROTECT := at91samd bootloader 16384
++    else
++        $(call show_config_variable,BOOTLOADER_PROTECT,[COMPUTED])
++    endif
++endif
++
++ifndef BOOTLOADER_PROTECT_VERIFY
++    BOOTLOADER_PROTECT_VERIFY := $(call PARSE_BOARD,$(BOARD_TAG),bootloader.cmd_protect_verify)
++    ifndef BOOTLOADER_PROTECT_VERIFY
++        BOOTLOADER_PROTECT_VERIFY := at91samd bootloader
++    else
++        $(call show_config_variable,BOOTLOADER_PROTECT_VERIFY,[COMPUTED])
++    endif
++endif
++
++CFLAGS_STD += -std=gnu11
++CPPFLAGS += -DMD -D$(USB_TYPE) '-DUSB_PRODUCT=$(USB_PRODUCT)' '-DUSB_MANUFACTURER=$(USB_MANUFACTURER)'
++
++# Get extra define flags from boards.txt
++EXFLAGS := $(shell echo $(call PARSE_BOARD,$(BOARD_TAG),build.extra_flags) | grep -oE '(-D)\w+')
++
++# Strip only defines from extra flags as boards file appends user {build.usb}
++CPPFLAGS += $(EXFLAGS)
++CPPFLAGS += -DUSB_VID=$(USB_VID)
++CPPFLAGS += -DUSB_PID=$(USB_PID)
++# Cortex compiler flags
++CPPFLAGS += -mthumb -nostdlib --param max-inline-insns-single=500 -fno-exceptions -Wl,-Map=$(OBJDIR)/$(TARGET).map
++CXXFLAGS += -fno-rtti -fno-threadsafe-statics -std=gnu++11
++
++ifndef SIZEFLAGS
++    SIZEFLAGS += -B
++endif
++
++AMCU := $(call PARSE_BOARD,$(BOARD_TAG),build.mcu)
++BOARD_LINKER_SCRIPT := $(call PARSE_BOARD,$(BOARD_TAG),build.ldscript)
++OPENOCD_SCRIPT := $(call PARSE_BOARD,$(BOARD_TAG),build.openocdscript)
++LINKER_SCRIPTS := -T$(ALTERNATE_CORE_PATH)/variants/$(VARIANT)/$(BOARD_LINKER_SCRIPT)
++OTHER_LIBS := $(call PARSE_BOARD,$(BOARD_TAG),build.flags.libs)
++
++# Due and SAMD boards have different flags/chip specific libs
++ifeq ($(findstring arduino_due, $(strip $(VARIANT))), arduino_due)
++    CPPFLAGS += -Dprintf=iprintf -DARDUINO_SAM_DUE
++    LDFLAGS += -mthumb -Wl,--cref -Wl,--check-sections -Wl,--gc-sections -Wl,--entry=Reset_Handler -Wl,--unresolved-symbols=report-all -Wl,--warn-common -Wl,--warn-section-align -Wl,--start-group -u _sbrk -u link -u _close -u _fstat -u _isatty -u _lseek -u _read -u _write -u _exit -u kill -u _getpid
++    LDFLAGS += -L$(LIB_PATH) -lm # -larm_cortexM3l_math # IDE doesn't include Cortex-M3 math lib on Due for some reason
++    OTHER_LIBS += $(ALTERNATE_CORE_PATH)/variants/$(VARIANT)/libsam_sam3x8e_gcc_rel.a
++else
++    LDFLAGS += --specs=nano.specs --specs=nosys.specs -mthumb -Wl,--cref -Wl,--check-sections -Wl,--gc-sections -Wl,--unresolved-symbols=report-all -Wl,--warn-common -Wl,--warn-section-align -Wl,--start-group
++    LDFLAGS += -larm_cortexM0l_math -L$(LIB_PATH) -lm
++endif
++
++# OpenOCD reset command only for now
++ifeq ($(strip $(UPLOAD_TOOL)), openocd)
++    RESET_CMD = $(OPENOCD) $(OPENOCD_OPTS) -c "telnet_port disabled; init; targets; reset run; shutdown"
++else
++    # Set zero flag for ard-reset for 1200 baud boot to bootloader
++    ARD_RESET_OPTS += --zero
++endif
++
++########################################################################
++# automatially include Arduino.mk for the user
++
++$(call show_separator)
++$(call arduino_output,Arduino.mk Configuration:)
++include $(ARDMK_DIR)/Arduino.mk
++
++print-%  : ; @echo $* = $($*)
+diff --git a/Teensy.mk b/Teensy.mk
+index 8bd822b..35107ac 100644
+--- a/Teensy.mk
++++ b/Teensy.mk
+@@ -38,25 +38,19 @@ ARDUINO_CORE_PATH   = $(ARDUINO_DIR)/hardware/teensy/avr/cores/teensy3
+ BOARDS_TXT          = $(ARDUINO_DIR)/hardware/$(ARDMK_VENDOR)/avr/boards.txt
+ 
+ 
+-ifndef PARSE_TEENSY
+-    # result = $(call READ_BOARD_TXT, 'boardname', 'parameter')
+-    PARSE_TEENSY = $(shell grep -v "^\#" "$(BOARDS_TXT)" | grep $(1).$(2) | cut -d = -f 2- )
+-endif
+-
+-
+ ifndef F_CPU
+   ifndef BOARD_SUB
+-    SPEEDS := $(call PARSE_TEENSY,"$(BOARD_TAG),menu.speed.*.build.fcpu") # Obtain sequence of supported frequencies.
++    SPEEDS := $(call PARSE_BOARD,"$(BOARD_TAG),menu.speed.*.build.fcpu") # Obtain sequence of supported frequencies.
+     SPEEDS := $(shell printf "%d\n" $(SPEEDS) | sort -g) # Sort it, just in case. Printf to re-append newlines so that sort works.
+     F_CPU := $(lastword $(SPEEDS)) # List is sorted in ascending order. Take the fastest speed.
+     #$(info "speeds is " $(SPEEDS))  # Good for debugging
+   else
+-    F_CPU := $(call PARSE_TEENSY,$(BOARD_TAG),menu.speed.$(BOARD_SUB).build.fcpu)
++    F_CPU := $(call PARSE_BOARD,$(BOARD_TAG),menu.speed.$(BOARD_SUB).build.fcpu)
+   endif
+ endif
+ 
+ # if boards.txt gets modified, look there, else hard code it
+-ARCHITECTURE  = $(call PARSE_TEENSY,$(BOARD_TAG),build.architecture)
++ARCHITECTURE  = $(call PARSE_BOARD,$(BOARD_TAG),build.architecture)
+ ifeq ($(strip $(ARCHITECTURE)),)
+ 	ARCHITECTURE = arm
+ endif
+@@ -72,81 +66,11 @@ endif
+ ########################################################################
+ # command names
+ 
+-ifndef CC_NAME
+-    CC_NAME := $(call PARSE_TEENSY,$(BOARD_TAG),build.command.gcc)
+-    ifndef CC_NAME
+-        CC_NAME := arm-none-eabi-gcc
+-    else
+-        $(call show_config_variable,CC_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef CXX_NAME
+-    CXX_NAME := $(call PARSE_TEENSY,$(BOARD_TAG),build.command.g++)
+-    ifndef CXX_NAME
+-        CXX_NAME := arm-none-eabi-g++
+-    else
+-        $(call show_config_variable,CXX_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef AS_NAME
+-    AS_NAME := $(call PARSE_TEENSY,$(BOARD_TAG),build.command.as)
+-    ifndef AS_NAME
+-        AS_NAME := arm-none-eabi-gcc-as
+-    else
+-        $(call show_config_variable,AS_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef OBJCOPY_NAME
+-    OBJCOPY_NAME := $(call PARSE_TEENSY,$(BOARD_TAG),build.command.objcopy)
+-    ifndef OBJCOPY_NAME
+-        OBJCOPY_NAME := arm-none-eabi-objcopy
+-    else
+-        $(call show_config_variable,OBJCOPY_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef OBJDUMP_NAME
+-    OBJDUMP_NAME := $(call PARSE_TEENSY,$(BOARD_TAG),build.command.objdump)
+-    ifndef OBJDUMP_NAME
+-        OBJDUMP_NAME := arm-none-eabi-objdump
+-    else
+-        $(call show_config_variable,OBJDUMP_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef AR_NAME
+-    AR_NAME := $(call PARSE_TEENSY,$(BOARD_TAG),build.command.ar)
+-    ifndef AR_NAME
+-        AR_NAME := arm-none-eabi-ar
+-    else
+-        $(call show_config_variable,AR_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef SIZE_NAME
+-    SIZE_NAME := $(call PARSE_TEENSY,$(BOARD_TAG),build.command.size)
+-    ifndef SIZE_NAME
+-        SIZE_NAME := arm-none-eabi-size
+-    else
+-        $(call show_config_variable,SIZE_NAME,[COMPUTED])
+-    endif
+-endif
+-
+-ifndef NM_NAME
+-    NM_NAME := $(call PARSE_TEENSY,$(BOARD_TAG),build.command.nm)
+-    ifndef NM_NAME
+-        NM_NAME := arm-none-eabi-gcc-nm
+-    else
+-        $(call show_config_variable,NM_NAME,[COMPUTED])
+-    endif
+-endif
++TOOL_PREFIX = arm-none-eabi
+ 
+ # processor stuff
+ ifndef MCU
+-    MCU := $(call PARSE_TEENSY,$(BOARD_TAG),build.cpu)
++    MCU := $(call PARSE_BOARD,$(BOARD_TAG),build.mcu)
+ endif
+ 
+ ifndef MCU_FLAG_NAME
+@@ -161,39 +85,39 @@ endif
+ 
+ CPPFLAGS += -DLAYOUT_US_ENGLISH -D$(USB_TYPE)
+ 
+-CPPFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.option)
++CPPFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.option)
+ 
+-CXXFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.cppoption)
+-ifeq ("$(call PARSE_TEENSY,$(BOARD_TAG),build.gnu0x)","true")
++CXXFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.cppoption)
++ifeq ("$(call PARSE_BOARD,$(BOARD_TAG),build.gnu0x)","true")
+     CXXFLAGS_STD      += -std=gnu++0x
+ endif
+ 
+-ifeq ("$(call PARSE_TEENSY,$(BOARD_TAG),build.elide_constructors)", "true")
++ifeq ("$(call PARSE_BOARD,$(BOARD_TAG),build.elide_constructors)", "true")
+     CXXFLAGS      += -felide-constructors
+ endif
+ 
+-CXXFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.common)
+-CXXFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.cpu)
+-CXXFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.defs)
+-CXXFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.cpp)
++CXXFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.common)
++CXXFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.cpu)
++CXXFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.defs)
++CXXFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.cpp)
+ 
+-CFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.common)
+-CFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.cpu)
+-CFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.defs)
++CFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.common)
++CFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.cpu)
++CFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.defs)
+ 
+-ASFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.common)
+-ASFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.cpu)
+-ASFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.defs)
+-ASFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.S)
++ASFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.common)
++ASFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.cpu)
++ASFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.defs)
++ASFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.S)
+ 
+-LDFLAGS += $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.cpu)
++LDFLAGS += $(call PARSE_BOARD,$(BOARD_TAG),build.flags.cpu)
+ 
+-AMCU := $(call PARSE_TEENSY,$(BOARD_TAG),build.mcu)
++AMCU := $(call PARSE_BOARD,$(BOARD_TAG),build.mcu)
+ LDFLAGS += -Wl,--gc-sections,--relax
+-LINKER_SCRIPTS = -T${ARDUINO_CORE_PATH}/${AMCU}.ld
+-OTHER_LIBS = $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.libs)
++LINKER_SCRIPTS ?= -T${ARDUINO_CORE_PATH}/${AMCU}.ld
++OTHER_LIBS = $(call PARSE_BOARD,$(BOARD_TAG),build.flags.libs)
+ 
+-CPUFLAGS = $(call PARSE_TEENSY,$(BOARD_TAG),build.flags.cpu)
++CPUFLAGS = $(call PARSE_BOARD,$(BOARD_TAG),build.flags.cpu)
+ # usually defined as per teensy31.build.mcu=mk20dx256 but that isn't valid switch
+ MCU := $(shell echo ${CPUFLAGS} | sed -n -e 's/.*-mcpu=\([a-zA-Z0-9_-]*\).*/\1/p')
+ 
+diff --git a/ardmk-init.1 b/ardmk-init.1
+new file mode 100644
+index 0000000..bb83fd2
+--- /dev/null
++++ b/ardmk-init.1
+@@ -0,0 +1,60 @@
++.TH ARDMK-INIT "1" "Nov 2017" "ardmk-init" "Arduino Makefile Generator"
++
++.SH NAME
++ardmk-init - Generate Arduino Makefile environments
++
++.SH SYNOPSIS
++.B ardmk-init
++[OPTION]...
++
++.SH OPTIONS
++.B \-v, \-\-verbose
++Print file contents during creation.
++
++.B \-d, \-\-directory
++Directory to run generator.
++
++.B \-b, \-\-board
++Board tag.
++
++.B \-u, \-\-micro
++Microcontroller on board.
++
++.B \-f, \-\-freq
++Clock frequency.
++
++.B \-p, \-\-port
++Monitor port.
++
++.B \-n, \-\-name
++Project name.
++
++.B \-\-cli
++Run with user prompts rather than arguments.
++
++.B \-p, \-\-project
++Create boilerplate project with src, lib and bin folder structure.
++
++.B \-t, \-\-template
++Create bare minimum Arduino source file.
++
++.SH DESCRIPTION
++Creates a Makefile and project tree structure from templates.
++
++.SH EXAMPLE
++ardmk-init -b uno # create Arduino uno Makefile
++.PP
++ardmk-init --cli # run with user prompts
++.PP
++ardmk-init --board uno --project --template --name my-project # create Arduino uno project and template with name "my-project"
++
++.SH BUGS
++Problems may reported on the github project page at:
++.PP
++https://github.com/sudar/Arduino-Makefile
++
++.SH AUTHOR
++John Whittington, git@jbrengineering.co.uk
++
++.SH LICENSE
++This is under MIT license.
+diff --git a/arduino-mk-vars.md b/arduino-mk-vars.md
+index 0df7a11..f173ac2 100644
+--- a/arduino-mk-vars.md
++++ b/arduino-mk-vars.md
+@@ -11,6 +11,8 @@ The following are the different variables that can be overwritten in the user ma
+ *	[Avrdude setting variables](#avrdude-setting-variables)
+ *	[Bootloader variables](#bootloader-variables)
+ *	[ChipKIT variables](#chipkit-variables)
++*	[ARM variables](#arm-variables)
++*	[Ctags variables](#ctags-variables)
+ 
+ ## Global variables
+ 
+@@ -72,6 +74,29 @@ AVR_TOOLS_DIR = /usr/share/arduino/hardware/tools/avr
+ 
+ ----
+ 
++### ARM_TOOLS_DIR
++
++**Description:**
++
++Directory where the arm toolchain is installed. `arm-none-eabi-*` should be
++within a /bin subdirectory.
++
++Can usually be detected from `$ARDUINO_PACKAGE_DIR` /tools subdirectory when ARM
++device support is installed.
++
++**Example:**
++
++```Makefile
++ARM_TOOLS_DIR = /usr
++# or
++ARM_TOOLS_DIR =
++/usr/share/arduino/hardware/tools/arm-none-eabi-gcc/VERSION
++```
++
++**Requirement:** *Optional*
++
++----
++
+ ### RESET_CMD
+ 
+ **Description:**
+@@ -113,6 +138,27 @@ ARDUINO_DIR = /Applications/Arduino.app/Contents/Java
+ 
+ ----
+ 
++### ARDUINO_PACKAGE_DIR
++
++**Description:**
++
++Directory where the Arduino package support files are stored. Can auto-detect based on default OS IDE locations.
++
++**Example:**
++
++```Makefile
++# Linux
++ARDUINO_PACKAGE_DIR = $(HOME)/.arduino15/packages
++# Mac OS X
++ARDUINO_PACKAGE_DIR = $(HOME)/Library/Arduino15/packages
++# Windows
++ARDUINO_PACKAGE_DIR = $(USERPROFILE)/AppData/Local/Arduino15/packages
++```
++
++**Requirement:** *Optional*
++
++----
++
+ ### ARDUINO_PLATFORM_LIB_PATH
+ 
+ **Description:**
+@@ -154,12 +200,13 @@ ARDUINO_VERSION = 105
+ 
+ Architecture for Arduino 1.5+
+ 
+-Defaults to unset for 1.0 or `avr` for 1.5+
++Defaults to unset for 1.0 or `avr` for 1.5+. This value is not literally the chip architecture but will often be
++the chip series within a vendor's 'hardware' folder. For example, will default to `samd` if using Sam.mk.
+ 
+ **Example:**
+ 
+ ```Makefile
+-ARCHITECTURE = sam
++ARCHITECTURE = arm
+ ```
+ 
+ **Requirement:** *Optional*
+@@ -170,9 +217,9 @@ ARCHITECTURE = sam
+ 
+ **Description:**
+ 
+-Board vendor/maintainer.
++Board vendor/maintainer/series.
+ 
+-Defaults to `arduino`
++Defaults to `arduino`.
+ 
+ **Example:**
+ 
+@@ -297,6 +344,33 @@ BOARD_SUB=atmega168
+ 
+ ----
+ 
++### BOARD_CLOCK
++
++**Description:**
++
++Allow selection of f_cpu and fuses specified in `boards.txt` as `{BOARD_TAG}.menu.clock.{BOARD_CLOCK}`.
++This works for microprocessor board definitions like ATtiny that specify not only the clock speed but fuse settings as clock overrides.
++
++It also works for f_cpu values specified in `boards.txt` as `{BOARD_TAG}.menu.speed.{BOARD_CLOCK}`.
++For example, the Watterott ATmega328PB library [https://github.com/watterott/ATmega328PB-Testing](https://github.com/watterott/ATmega328PB-Testing).
++
++**Example:**
++
++```Makefile
++# Select external 16 MHz clock
++BOARD_CLOCK=external16
++```
++
++**Example:**
++```Makefile
++# Select 20MHz speed
++BOARD_CLOCK=20mhz
++```
++
++**Requirement:** *Optional to override main board f_cpu and/or fuse settings.*
++
++----
++
+ ### MONITOR_PORT
+ 
+ **Description:**
+@@ -657,7 +731,8 @@ ISP_PROG = stk500v1
+ 
+ **Description:**
+ 
+-Device path to ArduinoISP. Not needed for hardware ISP's.
++Device path to ArduinoISP. Not needed for hardware ISP's. Also used to define
++bootloader port on SAMD devices.
+ 
+ **Example:**
+ 
+@@ -762,6 +837,37 @@ CC_NAME = pic32-gcc
+ 
+ ----
+ 
++## Compiler/Executable variables
++
++### TOOL_PREFIX
++
++**Description:**
++
++The tool prefix, which gets prepended to the tools like $(TOOL_PREFIX)-gcc, $(TOOL_PREFIX)-g++, etc.
++The following tools will be prefixed with '$(TOOL_PREFIX)-':
++
++   * gcc
++   * g++
++   * as
++   * objcopy
++   * objdump
++   * ar
++   * size
++   * nm
++
++Defaults to `avr`
++
++**Example:**
++
++```Makefile
++TOOL_PREFIX = arm-none-eabi
++TOOL_PREFIX = pic32
++```
++
++**Requirement:** *Optional*
++
++----
++
+ ### CXX_NAME
+ 
+ **Description:**
+@@ -870,6 +976,18 @@ NM_NAME = pic32-nm
+ 
+ ----
+ 
++### GDB_NAME
++
++**Description:**
++
++GDB utility.
++
++Defaults to `arm-none-eabi-gdb`
++
++**Requirement:** *Optional*
++
++----
++
+ ### OPTIMIZATION_LEVEL
+ 
+ **Description:**
+@@ -912,7 +1030,7 @@ OTHER_LIBS = -lsomeplatformlib
+ 
+ Controls, *exclusively*, which C standard is to be used for compilation.
+ 
+-Defaults to `undefined` on 1.0.x or `-std=gnu11 -flto -fno-fat-lto-objects` on 1.5+ or if you install AVR toolchain > 4.9.0
++Defaults to `undefined` on 1.0.x or `-std=gnu11` on 1.5+ or if you install AVR toolchain > 4.9.0
+ 
+ Possible values:
+ 
+@@ -927,14 +1045,14 @@ Possible values:
+ 	*	`-std=c11`
+ 	*	`-std=gnu89`
+ 	*	`-std=gnu99`
+-	*	`-std=gnu11 -flto -fno-fat-lto-objects` - This is the default for C code
++	*	`-std=gnu11` - This is the default for C code
+ 
+ For more information, please refer to the [Options Controlling C Dialect](https://gcc.gnu.org/onlinedocs/gcc/C-Dialect-Options.html)
+ 
+ **Example:**
+ 
+ ```Makefile
+-CFLAGS_STD = = -std=gnu89
++CFLAGS_STD = -std=gnu89
+ ```
+ 
+ **Requirement:** *Optional*
+@@ -947,7 +1065,7 @@ CFLAGS_STD = = -std=gnu89
+ 
+ Controls, *exclusively*, which C++ standard is to be used for compilation.
+ 
+-Defaults to `undefined` on 1.0 or `-std=gnu++11 -fno-threadsafe-statics -flto` on AVR toolchain > 4.9.0 (e.g. IDE 1.6.10+)
++Defaults to `undefined` on 1.0 or `-std=gnu++11` on AVR toolchain > 4.9.0 (e.g. IDE 1.6.10+)
+ 
+ Possible values:
+ 
+@@ -964,7 +1082,7 @@ Possible values:
+ 	*	`-std=c++1y`
+ 	*	`-std=c++14`
+ 	*	`-std=gnu++98`
+-	*	`-std=gnu++11 -fno-threadsafe-statics -flto` - This is the default for C++ code
++	*	`-std=gnu++11` - This is the default for C++ code
+ 	*	`-std=gnu++1y`
+ 	*	`-std=gnu++14`
+ 
+@@ -973,7 +1091,7 @@ For more information, please refer to the [Options Controlling C Dialect](https:
+ **Example:**
+ 
+ ```Makefile
+-CXXFLAGS_STD = = -std=gnu++98
++CXXFLAGS_STD = -std=gnu++98
+ ```
+ 
+ **Requirement:** *Optional*
+@@ -987,7 +1105,7 @@ CXXFLAGS_STD = = -std=gnu++98
+ Flags passed to compiler for files compiled as C. Add more flags to this
+ variable using `+=`.
+ 
+-Defaults to all flags required for a typical build.
++Defaults to `undefined` on 1.0 or `-flto -fno-fat-lto-objects -fdiagnostics-color=$(DIAGNOSTICS_COLOR_WHEN)` on AVR toolchain > 4.9.0 (e.g. IDE 1.6.10+)
+ 
+ **Example:**
+ 
+@@ -1006,7 +1124,9 @@ CFLAGS += -my-c-only-flag
+ Flags passed to the compiler for files compiled as C++. Add more flags to this
+ variable using `+=`.
+ 
+-Defaults to `-fpermissive -fno-exceptions`
++Defaults to `-fpermissive -fno-exceptions` on 1.0
++or `-fpermissive -fno-exceptions -fno-threadsafe-statics -flto -fno-devirtualize -fdiagnostics-color`
++on AVR toolchain > 4.9.0 (e.g. IDE 1.6.10+)
+ 
+ **Example:**
+ 
+@@ -1018,6 +1138,30 @@ CXXFLAGS += -my-c++-onlyflag
+ 
+ ----
+ 
++### DIAGNOSTICS_COLOR_WHEN
++
++**Description:**
++
++This variable controls the compiler's diagnostics-color setting, as defined
++in CFLAGS or CXXFLAGS, on AVR toolchain > 4.9.0.
++Supported values are: `always`, `never` and `auto`.
++For more details, see: [Options to Control Diagnostic Messages Formatting]
++(https://gcc.gnu.org/onlinedocs/gcc-4.9.2/gcc/Language-Independent-Options.html#Language-Independent-Options)
++
++Defaults to `always`.
++
++**Example:**
++
++```Makefile
++DIAGNOSTICS_COLOR_WHEN = never
++# or
++DIAGNOSTICS_COLOR_WHEN = auto
++```
++
++**Requirement:** *Optional*
++
++----
++
+ ### ASFLAGS
+ 
+ **Description:**
+@@ -1041,7 +1185,7 @@ ASFLAGS += -my-as-only-flag
+ 
+ **Description:**
+ 
+-Flags passed to the C pre-processor (for C, C++ and assembly source flies). Add
++Flags passed to the C pre-processor (for C, C++ and assembly source files). Add
+ more flags to this variable using `+=`.
+ 
+ Defaults to all flags required for a typical build.
+@@ -1060,14 +1204,27 @@ CPPFLAGS += -DMY_DEFINE_FOR_ALL_SOURCE_TYPES
+ 
+ **Description:**
+ 
+-Override the default build tools.
++Override the default build tool paths and names.
+ 
+-If set to `1`, each tool (`CC`, `CXX`, `AS`, `OBJCOPY`, `OBJDUMP`, `AR`, `SIZE`, `NM`) must have its path explicitly defined. See `chipKIT.mk`.
++If OVERRIDE_EXECUTABLES is defined, all tools (`CC`, `CXX`, `AS`,
++`OBJCOPY`, `OBJDUMP`, `AR`, `SIZE`, `NM`) must have their paths
++explicitly defined. This may be used in the rare case where
++overriding a path and/or executable name is required.
++The "?=" assignment cannot be used because the executable tags
++are already implicitly defined by Make (e.g. $(CC) == cc).
+ 
+ **Example:**
+ 
+ ```Makefile
+ OVERRIDE_EXECUTABLES = 1
++CC      = /usr/bin/avr-gcc
++CXX     = /usr/bin/avr-g++
++AS      = /usr/bin/avr-as
++OBJCOPY = /usr/bin/avr-objcopy
++OBJDUMP = /usr/bin/avr-objdump
++AR      = /usr/bin/avr-ar
++SIZE    = /some_path/alternative_avr-size
++NM      = /some_path/alternative_avr-nm
+ ```
+ 
+ **Requirement:** *Optional*
+@@ -1092,6 +1249,24 @@ MONITOR_CMD = minicom
+ 
+ ----
+ 
++### MONITOR_PARAMS
++
++**Description:**
++
++Additional parameters for the putty -sercfg command line argument.
++
++Interpreted as a comma-separated list of configuration options.
++
++**Example:**
++
++```Makefile
++MONITOR_PARAMS = 8,1,n,N
++```
++
++**Requirement:** *Optional*
++
++----
++
+ ### PRE_BUILD_HOOK
+ 
+ **Description:**
+@@ -1151,6 +1326,24 @@ AVRDUDE_CONF = /usr/share/arduino/hardware/tools/avrdude.conf
+ 
+ ----
+ 
++### AVRDUDE_AUTOERASE_FLASH
++
++**Description:**
++
++Enable autoerase flash.
++
++By default disabled.
++
++**Example:**
++
++```Makefile
++AVRDUDE_AUTOERASE_FLASH = yes
++```
++
++**Requirement:** *Optional*
++
++----
++
+ ### AVR_TOOLS_PATH
+ 
+ **Description:**
+@@ -1226,6 +1419,54 @@ ALTERNATE_CORE_PATH = $(HOME)/sketchbook/hardware/arduino-tiny/cores/tiny
+ 
+ ----
+ 
++### CORE_VER
++
++**Description:**
++
++Alternate core release version. The Arduino board support packages are within
++a sub-directory indicated by this define.
++
++Defaults to package current release.
++
++**Example:**
++
++```Makefile
++CORE_VER = 1.6.17
++```
++
++**Requirement:** *Optional*
++
++----
++
++### CMSIS_DIR
++
++**Description:**
++
++Path to ARM CMSIS. Normally installed as part of ARM  board support.
++
++Defaults to `ARDUINO_PACKAGE_DIR/tools/CMSIS/4.5.0/CMSIS`
++
++**Example:**
++
++```Makefile
++CMSIS_DIR = /usr/share/CMSIS
++```
++
++**Requirement:** *Optional*
++
++----
++
++### CMSIS_ATMEL_DIR
++
++**Description:**
++
++Path to CMSIS-Atmel directory. Installed with ARM support package.
++
++Defaults to `ARDUINO_PACKAGE_DIR/tools/CMSIS-Atmel/1.1.0/CMSIS`
++
++**Requirement:** *Optional*
++----
++
+ ### BOARDS_TXT
+ 
+ **Description:**
+@@ -1382,6 +1623,67 @@ Would result in an absolute path to the bootloader hex file of `$(HOME)/sketchbo
+ 
+ ----
+ 
++### BOOTLOADER_SIZE
++
++**Description:**
++
++Size of bootloader on ARM devices, ensures correct start address when flashing
++application area. Normally parsed from boards.txt
++
++Defaults to `0x2000`
++
++**Requirement:** *Optional*
++
++----
++
++### BOOTLOADER_UNPROTECT
++
++**Description:**
++
++Bootloader unprotect sequence for upload tool. Normally parsed from boards.txt
++
++Defaults to `at91samd bootloader 0`
++
++**Requirement:** *Optional*
++
++----
++
++### BOOTLOADER_PROTECT
++
++**Description:**
++
++Bootloader protect sequence for upload tool. Normally parsed from boards.txt
++
++Defaults to `at91samd bootloader 16384`
++
++**Requirement:** *Optional*
++
++----
++
++### BOOTLOADER_PROTECT_VERIFY
++
++**Description:**
++
++Bootloader protect and verify  sequence for upload tool. Normally parsed from boards.txt
++
++Defaults to `at91samd bootloader`
++
++**Requirement:** *Optional*
++
++----
++
++### BOOTLOADER_UPLOAD_TOOL
++
++**Description:**
++
++Bootloader upload binary to use. Normally parsed from boards.txt.
++
++Defaults to `openocd`
++
++**Requirement:** *Optional*
++
++----
++
+ ## ChipKIT variables
+ 
+ ### MPIDE_DIR
+@@ -1417,3 +1719,193 @@ MPIDE_PREFERENCES_PATH = $(HOME)/chipkit/preferences.txt
+ ```
+ 
+ **Requirement:** *Optional*
++
++----
++
++## ARM variables
++
++### UPLOAD_TOOL
++
++**Description:**
++
++Tool to upload binary to device. Normally parsed from boards.txt.
++
++Defaults to `openocd`
++
++**Example:**
++
++```Makefile
++UPLOAD_TOOL = gdb
++```
++
++**Requirement:** *Optional*
++
++----
++
++### DEBUG
++
++**Description:**
++
++Define to set `DEBUG_FLAGS` and allow stepping of code using GDB.
++
++Defaults to undefined.
++
++**Example:**
++
++```Makefile
++DEBUG = 1
++```
++
++**Requirement:** *Optional*
++
++----
++
++### GDB_PORT
++
++**Description:**
++
++Server port to use for GDB debugging or upload. Default assumes server running
++on localhost but can re-define to use Black Magic Probe serial port.
++
++Defaults to `localhost:3333`
++
++**Example:**
++
++```Makefile
++GDB_PORT = /dev/ttyACM0
++```
++
++**Requirement:** *Optional*
++
++----
++
++### GDB_OPTS
++
++**Description:**
++
++Optional arguments to parse to GDB command.
++
++Defaults to `-ex "target extended-remote $(GDB_PORT)" -ex "monitor swdp_scan" -ex "attach 1" -ex "load" -d $(OBJDIR) $(TARGET_ELF)`
++
++**Requirement:** *Optional*
++
++----
++
++### GDB_UPLOAD_OPTS
++
++**Description:**
++
++Optional arguments to parse to GDB command when uploading binary only.
++
++Defaults to `GDB_UPLOAD_OPTS = $(GDB_OPTS) -ex "set confirm off" -ex "set target-async off" -ex "set remotetimeout 30" -ex "detach" -ex "kill" -ex "quit"`
++
++**Requirement:** *Optional*
++
++----
++
++### BOSSA
++
++**Description:**
++
++Path to bossac binary.
++
++Can usually be detected from `$ARDUINO_PACKAGE_DIR` /tools subdirectory when ARM
++device support is installed.
++
++**Requirement:** *Optional*
++
++----
++
++### BOSSA_OPTS
++
++**Description:**
++
++Flags to pass to bossac command.
++
++Defaults to `-d --info --erase --write --verify --reset`
++
++**Requirement:** *Optional*
++
++----
++
++### OPENOCD
++
++**Description:**
++
++Path to openocd binary.
++
++Can usually be detected from `$ARDUINO_PACKAGE_DIR` /tools subdirectory when ARM
++device support is installed.
++
++**Requirement:** *Optional*
++
++----
++
++### OPENOCD_OPTS
++
++**Description:**
++
++Flags to pass to openocd command. If using openocd from non-Arduino
++distributions, one should define this with the path to the Arduino openocd script.
++
++Defaults to `-d2`
++
++Example:
++
++```Makefile
++OPENOCD_OPTS = $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/tools/openocd/0.9.0-arduino6-static/share/openocd/scripts/ -f $(ARDUINO_PACKAGE_DIR)/$(ARDMK_VENDOR)/hardware/samd/1.6.17/variants/$(VARIANT)/$(OPENOCD_SCRIPT) 
++```
++
++**Requirement:** *Optional*
++
++
++----
++
++## Ctags variables
++
++### TAGS_FILE
++
++**Description:**
++
++Output file name for tags. Defaults to 'tags'.
++
++**Example:**
++
++```Makefile
++TAGS_FILE = .tags
++```
++
++**Requirement:** *Optional*
++
++----
++
++### CTAGS_OPTS
++
++**Description:**
++
++Additional options to pass to `ctags` command.
++
++**Example:**
++
++```Makefile
++# Run ctags in verbose mode
++CTAGS_OPTS = -V
++```
++
++**Requirement:** *Optional*
++
++----
++
++### CTAGS_CMD
++
++**Description:**
++
++Location of `ctags` binary. Defaults to user path.
++
++**Example:**
++
++```Makefile
++CTAGS_CMD = /usr/local/bin/
++```
++
++**Requirement:** *Optional*
+diff --git a/bin/ard-reset-arduino b/bin/ard-reset-arduino
+index 1f2c7e9..d6f974f 100755
+--- a/bin/ard-reset-arduino
++++ b/bin/ard-reset-arduino
+@@ -2,6 +2,7 @@
+ 
+ from __future__ import print_function
+ import serial
++import serial.tools.list_ports
+ import os.path
+ import argparse
+ from time import sleep
+@@ -13,13 +14,100 @@ except:
+   pyserial_version = 2  # less than 2.3
+ 
+ parser = argparse.ArgumentParser(description='Reset an Arduino')
++parser.add_argument('--zero', action='store_true', help='Reset Arduino Zero or similar Native USB to enter bootloader')
+ parser.add_argument('--caterina', action='store_true', help='Reset a Leonardo, Micro, Robot or LilyPadUSB.')
+ parser.add_argument('--verbose', action='store_true', help="Watch what's going on on STDERR.")
+ parser.add_argument('--period', default=0.1, help='Specify the DTR pulse width in seconds.')
+ parser.add_argument('port', nargs=1, help='Serial device e.g. /dev/ttyACM0')
+ args = parser.parse_args()
+ 
+-if args.caterina:
++
++def list_ports(output=False):
++    """ Lists serial ports attached
++
++        :returns
++            A list of paths to serial ports on system
++    """
++    ports = serial.tools.list_ports.comports()
++    connected = [port[0] for port in ports]
++    if output:
++        print(connected)
++
++    return connected
++
++
++def new_port(old, new):
++    """ Checks if a new port has attached
++
++        Args:
++            old: previous list of ports to check
++            new: current list of ports to check
++        Returns:
++            index of port in 'new' if new port found, otherwise -1
++    """
++    new_port = -1
++
++    for port in new:
++        if port not in old:
++            new_port = new.index(port)
++            break
++
++    return new_port
++
++
++if args.zero:
++    # number of trys to attempt
++    zero_attempts = 20 # ~2 seconds
++    initial_ports = list_ports(args.verbose)
++
++    if args.verbose:
++        print('Attempting to enter bootloader using 1200 bps open/close on port %s' % args.port[0])
++
++    ser = serial.Serial(args.port[0], 57600)
++    ser.close()
++
++    if pyserial_version < 3:
++        ser.setBaudrate(1200)
++    else:
++        ser.baudrate = 1200
++
++    # do the open/close at 1200 BAUD
++    ser.open()
++    ser.close()
++
++    if args.verbose:
++        print('Done. Waiting for bootloader port to attach...')
++
++    # get new list of ports
++    reset_ports = list_ports(args.verbose)
++
++    # wait for new port or port to return
++    port_index = new_port(initial_ports, reset_ports)
++
++    # keep checking until new port appears or timeout
++    while port_index < 0:
++        # count down attempts and leave if expired
++        zero_attempts -= 1
++        if zero_attempts < 0:
++            break
++        sleep(0.1)
++        # get list of ports after bootloader toggle performed
++        reset_ports = list_ports(args.verbose)
++        # if a port drops, set initial ports to reset ports so that
++        # next attached device will be new port
++        if (len(reset_ports) < len(initial_ports)):
++            initial_ports = reset_ports
++        # check if a new port has attached and return the index if it has
++        port_index = new_port(initial_ports, reset_ports)
++    # return the new port if detected, otherwise return passed port
++    if port_index is -1:
++        bootloader_port = args.port[0]
++    else:
++        bootloader_port = reset_ports[port_index]
++
++    # print so that `tail -1` can be piped for bootloader port
++    print(bootloader_port)
++elif args.caterina:
+     if args.verbose: print('Forcing reset using 1200bps open/close on port %s' % args.port[0])
+     ser = serial.Serial(args.port[0], 57600)
+     ser.close()
+diff --git a/bin/ardmk-init b/bin/ardmk-init
+new file mode 100755
+index 0000000..51b12f0
+--- /dev/null
++++ b/bin/ardmk-init
+@@ -0,0 +1,278 @@
++#!/usr/bin/env python
++"""
++Arduino-mk Makefile and project initialiser
++
++This script can be used in its basic form create a project specific Makefile
++for use with Arduino-mk. Addionally, it can be used to create a template
++Arduino source file and a traditional boilerplate project file structure.
++
++Example:
++    * Run prompted within current working directory (requires Clint): `ardmk-init --cli`
++    * Create Arduino Uno Makefile (useful within a library example): `ardmk-init -b uno`
++    * Create boilerplate Arduino Uno project in current working directory of same
++      name: `ardmk-init -b uno --project`
++    * Create Arduino-mk nano Makefile in current working directory with template .ino:
++    `ardmk-init -b nano -u atmega328 -tn my-project`
++
++See `armk-init --help` for CLI arguments
++"""
++
++from __future__ import print_function
++import os
++import argparse
++
++## Global Vars
++VERSION = "1.2"
++ARD_TEMPLATE = "\n\
++#include <Arduino.h>\n\
++#include <Wire.h>\n\
++\n\
++\n\
++void setup() {\n\
++}\n\
++\n\
++void loop() {\n\
++}\n\
++"
++
++## Command Parser
++PARSER = argparse.ArgumentParser(prog='ardmk-init',
++                                 description='Arduino Makefile and boilerplate project generator.\
++        For use with Ard-Makefile: https://github.com/sudar/Arduino-Makefile.\
++        Script created by John Whittington https://github.com/tuna-f1sh 2017\
++        \n\nVersion: ' + VERSION)
++PARSER.add_argument('-v', '--verbose', action='store_true',
++                    help="print file contents during creation")
++PARSER.add_argument('-d', '--directory', default=os.getcwd(), help='directory to run generator, default cwd')
++PARSER.add_argument('-b', '--board', default='uno', help='board tag')
++PARSER.add_argument('-u', '--micro', default='AUTO', help='microcontroller on board')
++PARSER.add_argument('-f', '--freq', default='AUTO', help='clock frequency')
++PARSER.add_argument('-p', '--port', default='AUTO', help='monitor port')
++PARSER.add_argument('-n', '--name', default=os.path.basename(os.getcwd()), help='project name')
++PARSER.add_argument('-s', '--sam', action='store_true', help='sam device, will include Sam.mk rather than Arduino.mk')
++PARSER.add_argument('--cli', action='store_true', help='run with user prompts (requires "Clint" module), rather than args')
++PARSER.add_argument('-P', '--project', action='store_true',
++                    help='create boilerplate project with src, lib and bin folder structure')
++PARSER.add_argument('-t', '--template', action='store_true',
++                    help='create bare minimum Arduino source file') 
++PARSER.add_argument('-V', '--version', action='version', version='%(prog)s '+ VERSION)
++ARGS = PARSER.parse_args()
++
++try:
++    from clint.textui import prompt, validators
++except ImportError:
++    if ARGS.cli:
++        print("Python module 'clint' is required for running prompted. Install the module or run with arguments only")
++        quit()
++
++
++def generate_makefile():
++    """
++    Generate the Makefile content using prompts or parsed arguments
++    """
++    # Header
++    file_content = "# Generated by ard-make version " + VERSION + "\n\n"
++
++    # Basic
++    if ARGS.cli:
++        print("Generating Arduino Ard-Makefile project in "
++                          + os.path.abspath(ARGS.directory))
++        btag = prompt.query('Board tag?', default='uno')
++        if btag != 'uno':
++            bsub = prompt.query('Board sub micro?', default='atmega328')
++            f_cpu = prompt.query('Board frequency', default='16000000L')
++        else:
++            bsub = 'AUTO'
++            f_cpu = 'AUTO'
++        monitor_port = prompt.query('Arduino port?', default='AUTO')
++    else:
++        btag = ARGS.board
++        bsub = ARGS.micro
++        f_cpu = ARGS.freq
++        monitor_port = ARGS.port
++
++    file_content += check_define('BOARD_TAG', btag)
++    file_content += check_define('BOARD_SUB', bsub)
++    file_content += check_define('F_CPU', f_cpu)
++    file_content += check_define('MONITOR_PORT', monitor_port)
++
++    # Extended
++    if ARGS.cli:
++        if not prompt.yn('Extended options?', default='n'):
++            if not prompt.yn('Define local folders?', default='n'):
++                src_dir = prompt.query('Sources folder (Makefile will be created here)?',
++                                       default='', validators=[])
++                userlibs = prompt.query('Library folder (will create if does not exist) - AUTO is Sketchbook directory?',
++                                        default='AUTO', validators=[])
++                obj_dir = prompt.query('Output directory?', default='AUTO', validators=[])
++            else:
++                src_dir = ''
++                userlibs = 'AUTO'
++                obj_dir = 'AUTO'
++            boards_txt = prompt.query('Boards file?', default='AUTO')
++            isp_prog = prompt.query('ISP programmer?', default='atmelice_isp')
++            isp_port = prompt.query('ISP port?', default='AUTO')
++            if not prompt.yn('Quiet make?', default='n'):
++                file_content += "ARDUINO_QUIET = 1\n"
++
++            file_content += check_define('ISP_PROG', isp_prog)
++            file_content += check_define('ISP_PORT', isp_port)
++            file_content += check_define('BOARDS_TXT', boards_txt)
++
++            # Check andd create folders
++            check_create_folder(src_dir)
++            check_create_folder(userlibs)
++            check_create_folder(obj_dir)
++
++            # Makefile will be in src_dir so lib and bin must be relative
++            if src_dir:
++                userlibs = "../" + userlibs
++                obj_dir = "../" + obj_dir
++
++            file_content += check_define('USER_LIB_PATH', userlibs)
++            file_content += check_define('OBJDIR', obj_dir)
++        else:
++            src_dir = ''
++
++        if ARGS.template or not prompt.yn('Create template Arduino source?', default='n'):
++            source_filename = prompt.query('Name of project?',
++                                           default=os.path.basename(os.getcwd()))
++            if src_dir:
++                write_template(src_dir + "/" + source_filename)
++            else:
++                write_template(source_filename)
++            file_content += check_define('TARGET', source_filename)
++
++    else:
++        if ARGS.project:
++            src_dir = 'src'
++            userlibs = 'lib'
++            obj_dir = 'bin'
++        else:
++            src_dir = ''
++            userlibs = 'AUTO'
++            obj_dir = 'AUTO'
++
++        # Check andd create folders
++        check_create_folder(src_dir)
++        check_create_folder(userlibs)
++        check_create_folder(obj_dir)
++
++        # Makefile will be in src_dir so lib and bin must be relative
++        if src_dir:
++            userlibs = "../" + userlibs
++            obj_dir = "../" + obj_dir
++
++        file_content += check_define('USER_LIB_PATH', userlibs)
++        file_content += check_define('OBJDIR', obj_dir)
++
++        if ARGS.project or ARGS.template:
++            if src_dir:
++                write_template(src_dir + "/" + ARGS.name)
++            else:
++                write_template(ARGS.name)
++            file_content += check_define('TARGET', ARGS.name)
++
++    if not "ARDMK_DIR" in os.environ:
++        if not ARGS.cli:
++            print("Warning: ARDMK_DIR environment variable not defined. \
++                        Must be defined for Makefile to work")
++        else:
++            ardmk = prompt.query('Arduino Makefile path?',
++                                 default='/usr/share/arduino',
++                                 validators=[validators.PathValidator()])
++            ardmk = "ARDMK_DIR := " + ardmk + "\n"
++
++    if ARGS.sam:
++        file_content += "\ninclude $(ARDMK_DIR)/Sam.mk"
++    else:
++        file_content += "\ninclude $(ARDMK_DIR)/Arduino.mk"
++
++    # Add forward slash if source directory exists
++    if src_dir:
++        write_to_makefile(file_content, (src_dir + "/"))
++    else:
++        write_to_makefile(file_content, "")
++
++    return file_content
++
++def write_to_makefile(file_content, path):
++    """
++    Write the Makefile file
++    """
++    makefile = open(path + "Makefile", 'w')
++    print("Writing Makefile...")
++    if ARGS.verbose:
++        print(file_content)
++    makefile.write(file_content)
++    makefile.close()
++
++def write_template(filename):
++    """
++    Write template Arduino .ino source
++    """
++    print("Writing " + os.path.abspath(filename) + ".ino...")
++    if os.path.isfile(filename + '.ino'):
++        if not ARGS.cli:
++            print(filename + '.ino' + ' already exists! Stopping.')
++            return
++        print(filename + '.ino' + ' already exists! Overwrite?')
++        if prompt.yn('Continue?', default='n'):
++            return
++    src = open((filename + ".ino"), 'w')
++    if ARGS.verbose:
++        print(ARD_TEMPLATE)
++    src.write("/* Project: " + filename + " */\n" + ARD_TEMPLATE)
++    src.close()
++
++def check_create_folder(folder):
++    """
++    Check if folder exists and make it if it doesn't and hasn't been set to AUTO
++    """
++    if folder and not folder == 'AUTO':
++        if not os.path.exists(folder):
++            print("Creating " + os.path.abspath(folder) + " folder")
++            os.makedirs(folder)
++
++def check_define(define, user):
++    """
++    Check whether user has set define and return Makefile formatted string if they have
++    """
++    # Return is empty unless user has passed value
++    string = ""
++
++    # Set define only if not empty or set to AUTO
++    if user and not user == 'AUTO':
++        string = define + " = " + user + "\n"
++
++    return string
++
++def check_args():
++    """
++    Check input args will work with Makefile
++    """
++    # Micro should be defined for non uno boards
++    if ARGS.board != 'uno' and ARGS.micro == 'AUTO':
++        print('\n!!! Warning: --micro should be defined and not left AUTO for non-Uno boards\n')
++
++
++if __name__ == '__main__':
++    # Create directory if not exist
++    check_create_folder(ARGS.directory)
++    # Check input args
++    check_args()
++    # Change to dir so all commands are run relative
++    os.chdir(ARGS.directory)
++    if os.path.isfile('Makefile'):
++        if not ARGS.cli:
++            print('Makefile in ' + os.path.abspath(ARGS.directory)
++                             + ' already exists! Please remove before generating. Stopping.')
++            quit()
++
++        # Confirm with user if not quiet mode
++        print('Makefile in ' + os.path.abspath(ARGS.directory)
++                         + ' already exists! Overwrite?')
++        if prompt.yn('Continue?', default='n'):
++            quit()
++    # Run it
++    generate_makefile()
+diff --git a/chipKIT.mk b/chipKIT.mk
+index 298ac96..e5e4386 100644
+--- a/chipKIT.mk
++++ b/chipKIT.mk
+@@ -72,8 +72,7 @@ ifeq ($(CURRENT_OS),LINUX)
+     AVRDUDE_CONF = $(AVRDUDE_DIR)/avrdude.conf
+ endif
+ 
+-PIC32_TOOLS_DIR = $(ARDUINO_DIR)/hardware/pic32/compiler/pic32-tools
+-PIC32_TOOLS_PATH = $(PIC32_TOOLS_DIR)/bin
++AVR_TOOLS_DIR = $(ARDUINO_DIR)/hardware/pic32/compiler/pic32-tools
+ 
+ ALTERNATE_CORE = pic32
+ ALTERNATE_CORE_PATH = $(MPIDE_DIR)/hardware/pic32
+@@ -89,23 +88,7 @@ CORE_AS_SRCS = $(ARDUINO_CORE_PATH)/vector_table.S \
+ 
+ ARDUINO_VERSION = 23
+ 
+-CC_NAME = pic32-gcc
+-CXX_NAME = pic32-g++
+-AR_NAME = pic32-ar
+-OBJDUMP_NAME = pic32-objdump
+-OBJCOPY_NAME = pic32-objcopy
+-SIZE_NAME = pic32-size
+-NM_NAME = pic32-nm
+-
+-OVERRIDE_EXECUTABLES = 1
+-CC      = $(PIC32_TOOLS_PATH)/$(CC_NAME)
+-CXX     = $(PIC32_TOOLS_PATH)/$(CXX_NAME)
+-AS      = $(PIC32_TOOLS_PATH)/$(AS_NAME)
+-OBJCOPY = $(PIC32_TOOLS_PATH)/$(OBJCOPY_NAME)
+-OBJDUMP = $(PIC32_TOOLS_PATH)/$(OBJDUMP_NAME)
+-AR      = $(PIC32_TOOLS_PATH)/$(AR_NAME)
+-SIZE    = $(PIC32_TOOLS_PATH)/$(SIZE_NAME)
+-NM      = $(PIC32_TOOLS_PATH)/$(NM_NAME)
++TOOL_PREFIX = pic32
+ 
+ LDSCRIPT = $(call PARSE_BOARD,$(BOARD_TAG),ldscript)
+ LDSCRIPT_FILE = $(ARDUINO_CORE_PATH)/$(LDSCRIPT)
+diff --git a/examples/ATtinyBlink/Makefile b/examples/ATtinyBlink/Makefile
+index b4e49be..f73d7a0 100644
+--- a/examples/ATtinyBlink/Makefile
++++ b/examples/ATtinyBlink/Makefile
+@@ -1,13 +1,59 @@
+ # Arduino Make file. Refer to https://github.com/sudar/Arduino-Makefile
+ 
+-# if you have placed the alternate core in your sketchbook directory, then you can just mention the core name alone.
+-ALTERNATE_CORE = attiny
+-# If not, you might have to include the full path.
+-#ALTERNATE_CORE_PATH = /home/sudar/Dropbox/code/arduino-sketches/hardware/attiny/
++# Set this if the IDE is not in your $PATH or you want to use a specific version:
++ARDUINO_DIR = $(HOME)/arduino-1.8.5
+ 
+-BOARD_TAG    = attiny85-8
+-ISP_PORT = /dev/ttyACM*
++# Programmer type:
++ISP_PROG = usbasp
+ 
+-include $(ARDMK_DIR)/Arduino.mk
++# Examples - obviously pick only one and comment/delete the rest:
+ 
+-# !!! Important. You have to use make ispload to upload when using ISP programmer
++# ------------------------------------------------------------------ #
++
++# https://github.com/SpenceKonde/ATTinyCore (1.5+)
++ALTERNATE_CORE = ATTinyCore
++BOARD_TAG = attinyx4
++BOARD_SUB = 84
++VARIANT = tinyX4
++F_CPU = 8000000L
++#BOARD_TAG = attinyx313
++#BOARD_SUB = 4313
++#BOARD_TAG = attinyx61
++#BOARD_SUB = 861
++#F_CPU = 8000000L
++
++# ------------------------------------------------------------------ #
++
++# https://github.com/Coding-Badly/TinyCore1 (1.5+)
++ALTERNATE_CORE = tiny
++BOARD_TAG = attiny85at8
++#BOARD_TAG = attiny2313at1
++
++# https://github.com/Coding-Badly/arduino-tiny (1.0)
++ALTERNATE_CORE = tiny
++BOARD_TAG = attiny85at8
++#BOARD_TAG = attiny44at8
++#BOARD_TAG = attiny84at8
++ARDUINO_VAR_PATH = $(HOME)/arduino/hardware/tiny/cores/tiny
++ARDUINO_CORE_PATH = $(HOME)/arduino/hardware/tiny/cores/tiny
++
++# ------------------------------------------------------------------ #
++
++# https://github.com/damellis/attiny (1.5+)
++ALTERNATE_CORE = attiny-master
++BOARD_TAG = attiny
++BOARD_SUB = attiny85
++F_CPU = 16000000L
++
++# https://github.com/damellis/attiny (1.0)
++ALTERNATE_CORE = attiny-master
++BOARD_TAG = attiny85
++#BOARD_TAG = attiny44-8
++#BOARD_TAG = attiny84-20
++
++# ------------------------------------------------------------------ #
++
++# Path to the Arduino Makefile
++include /usr/share/arduino/Arduino.mk
++
++# !!! Important. You have to use 'make ispload' when using an ISP.
+diff --git a/examples/Blink/Makefile b/examples/Blink/Makefile
+index c26b797..7cb3881 100644
+--- a/examples/Blink/Makefile
++++ b/examples/Blink/Makefile
+@@ -45,8 +45,8 @@ include ../../Arduino.mk
+ #BOOTLOADER_PARENT = $(HOME)/arduino/hardware/promicro/bootloaders
+ #BOOTLOADER_PATH   = caterina
+ #BOOTLOADER_FILE   = Caterina-promicro16.hex
+-#ISP_PROG     	   = usbasp
+-#AVRDUDE_OPTS 	   = -v
++#ISP_PROG          = usbasp
++#AVRDUDE_OPTS      = -v
+ #include /usr/share/arduino/Arduino.mk
+ 
+ # --- chipkit
+@@ -75,40 +75,8 @@ include ../../Arduino.mk
+ #ARDUINO_DIR  = /where/you/installed/arduino-1.6.5
+ #include /usr/share/arduino/Arduino.mk
+ 
+-# --- arduino-tiny ide 1.0
+-#ISP_PROG     	    = usbasp
+-#BOARD_TAG          = attiny85at8
+-#ALTERNATE_CORE     = tiny
+-#ARDUINO_VAR_PATH   = $(HOME)/arduino/hardware/tiny/cores/tiny
+-#ARDUINO_CORE_PATH  = $(HOME)/arduino/hardware/tiny/cores/tiny
+-#AVRDUDE_OPTS 	    = -v
+-#include /usr/share/arduino/Arduino.mk
+-
+-# --- arduino-tiny ide 1.6
+-#ISP_PROG       = usbasp
+-#BOARD_TAG      = attiny85at8
+-#ALTERNATE_CORE = tiny
+-#ARDUINO_DIR    = /where/you/installed/arduino-1.6.5
+-#include /usr/share/arduino/Arduino.mk
+-
+-# --- damellis attiny ide 1.0
+-#ISP_PROG       = usbasp
+-#BOARD_TAG      = attiny85
+-#ALTERNATE_CORE = attiny-master
+-#AVRDUDE_OPTS   = -v
+-#include /usr/share/arduino/Arduino.mk
+-
+-# --- damellis attiny ide 1.6
+-#ISP_PROG       = usbasp
+-#BOARD_TAG      = attiny
+-#BOARD_SUB      = attiny85
+-#ALTERNATE_CORE = attiny
+-#F_CPU          = 16000000L
+-#ARDUINO_DIR    = /where/you/installed/arduino-1.6.5
+-#include /usr/share/arduino/Arduino.mk
+-
+ # --- teensy3
+-#BOARD_TAG 	 = teensy31
++#BOARD_TAG   = teensy31
+ #ARDUINO_DIR = /where/you/installed/the/patched/teensy/arduino-1.0.6
+ #include /usr/share/arduino/Teensy.mk
+ 
+@@ -118,8 +86,31 @@ include ../../Arduino.mk
+ #BOOTLOADER_PARENT = $(HOME)/arduino/hardware/mighty-1284p/bootloaders
+ #BOOTLOADER_PATH   = optiboot
+ #BOOTLOADER_FILE   = optiboot_atmega1284p.hex
+-#ISP_PROG     	   = usbasp
+-#AVRDUDE_OPTS 	   = -v
++#ISP_PROG          = usbasp
++#AVRDUDE_OPTS      = -v
++#include /usr/share/arduino/Arduino.mk
++
++# --- mightycore
++#ALTERNATE_CORE = MightyCore
++#BOARD_TAG = 1284
++#MCU = atmega1284p
++#BOARD_TAG = 644
++#MCU = atmega644p
++#VARIANT = standard
++#F_CPU = 16000000L
++#include /usr/share/arduino/Arduino.mk
++
++# ---  megacore
++#BOARD_TAG      = 128
++#ALTERNATE_CORE = megacore
++#F_CPU          = 16000000L
++#include /usr/share/arduino/Arduino.mk
++
++# --- sanguino 644p
++#BOARD_TAG      = atmega644p
++#ALTERNATE_CORE = sanguino
++#ISP_PROG       = usbasp
++#AVRDUDE_OPTS   = -v
+ #include /usr/share/arduino/Arduino.mk
+ 
+ # --- atmega328p on breadboard
+diff --git a/examples/Blink3rdPartyLib/Blink3rdPartyLib.cpp b/examples/Blink3rdPartyLib/Blink3rdPartyLib.cpp
+new file mode 100644
+index 0000000..c0ddb88
+--- /dev/null
++++ b/examples/Blink3rdPartyLib/Blink3rdPartyLib.cpp
+@@ -0,0 +1,23 @@
++// A derived Blink, that uses an example 3rd party library.
++// Turns on an LED on for one second, then off for one second, repeatedly.
++// This example code is in the public domain.
++
++#include <TogglePin.h>
++
++#ifdef ARDUINO
++#if ARDUINO >= 100
++#include "Arduino.h"
++#else
++#include "WProgram.h"
++#endif
++#endif // ARDUINO
++
++int main()
++{
++	init();
++	TogglePin led(13, false);
++	while (true) {
++		delay(1000);
++		led.toggle();
++	}
++}
+diff --git a/examples/Blink3rdPartyLib/Makefile b/examples/Blink3rdPartyLib/Makefile
+new file mode 100644
+index 0000000..f473dbd
+--- /dev/null
++++ b/examples/Blink3rdPartyLib/Makefile
+@@ -0,0 +1,24 @@
++# This program is free software and is licensed under the same conditions as
++# describe in https://github.com/sudar/Arduino-Makefile/blob/master/licence.txt
++
++# This is an example Makefile, that demonstrates the linking of a third party
++# library. In this case the third party library resides in the ./Toggle
++# sub-directory. Note that the archive TOGGLE_ARCHIVE _only_ contains the
++# compiled Toggle.c.o object. The TOGGLE_ARCHIVE is thus very lean, but it
++# requires the Arduino libraries, which are being build in this directory,
++# together with Blink, the 'main' program.
++
++include board.mk
++
++TOGGLE_ARCHIVE = build-$(BOARD_TAG)/libtoggle.a
++
++CXXFLAGS += -IToggle
++OTHER_OBJS = Toggle/$(TOGGLE_ARCHIVE)
++
++include ../../Arduino.mk
++
++Toggle/$(TOGGLE_ARCHIVE):
++	$(MAKE) -C Toggle $(TOGGLE_ARCHIVE)
++
++clean::
++	$(MAKE) -C Toggle clean
+diff --git a/examples/Blink3rdPartyLib/Toggle/Makefile b/examples/Blink3rdPartyLib/Toggle/Makefile
+new file mode 100644
+index 0000000..a6234f6
+--- /dev/null
++++ b/examples/Blink3rdPartyLib/Toggle/Makefile
+@@ -0,0 +1,14 @@
++# This program is free software and is licensed under the same conditions as
++# describe in https://github.com/sudar/Arduino-Makefile/blob/master/licence.txt
++
++# This is an example Makefile, that is being used to build an archive
++# from locally compiled objects.
++#
++# All source files in this directory will automatically get compiled
++# and archived into the build-$(BOARD_TAG)/libtoggle.a target.
++
++include ../board.mk
++include ../../../Arduino.mk
++
++build-$(BOARD_TAG)/libtoggle.a: $(LOCAL_OBJS)
++	$(AR) rcs $@ $(LOCAL_OBJS)
+diff --git a/examples/Blink3rdPartyLib/Toggle/TogglePin.cpp b/examples/Blink3rdPartyLib/Toggle/TogglePin.cpp
+new file mode 100644
+index 0000000..fd6925d
+--- /dev/null
++++ b/examples/Blink3rdPartyLib/Toggle/TogglePin.cpp
+@@ -0,0 +1,27 @@
++// This program is free software and is licensed under the same conditions as
++// describe in https://github.com/sudar/Arduino-Makefile/blob/master/licence.txt
++
++#include "TogglePin.h"
++
++#ifdef ARDUINO
++#if ARDUINO >= 100
++#include "Arduino.h"
++#else
++#include "WProgram.h"
++#endif
++#endif // ARDUINO
++
++TogglePin::TogglePin(int pinNumber, bool state)
++	: _pinNumber(pinNumber), _state(state)
++{
++	pinMode(_pinNumber, OUTPUT);
++	digitalWrite(_pinNumber, _state ? HIGH : LOW);
++}
++
++bool
++TogglePin::toggle()
++{
++	_state = !_state;
++	digitalWrite(_pinNumber, _state ? HIGH : LOW);
++	return _state;
++}
+diff --git a/examples/Blink3rdPartyLib/Toggle/TogglePin.h b/examples/Blink3rdPartyLib/Toggle/TogglePin.h
+new file mode 100644
+index 0000000..5a7e32c
+--- /dev/null
++++ b/examples/Blink3rdPartyLib/Toggle/TogglePin.h
+@@ -0,0 +1,19 @@
++// This program is free software and is licensed under the same conditions as
++// describe in https://github.com/sudar/Arduino-Makefile/blob/master/licence.txt
++
++#ifndef TOGGLEPIN_H_
++#define TOGGLEPIN_H_
++
++class TogglePin
++{
++ public:
++	TogglePin(int pinNumber, bool state);
++
++	bool toggle();
++
++ private:
++	const int _pinNumber;
++	bool _state;
++};
++
++#endif
+diff --git a/examples/Blink3rdPartyLib/board.mk b/examples/Blink3rdPartyLib/board.mk
+new file mode 100644
+index 0000000..b405c61
+--- /dev/null
++++ b/examples/Blink3rdPartyLib/board.mk
+@@ -0,0 +1,7 @@
++# This program is free software and is licensed under the same conditions as
++# describe in https://github.com/sudar/Arduino-Makefile/blob/master/licence.txt
++
++# The following can be overridden at make-time, by setting an environment
++# variable with the same name. eg. BOARD_TAG=pro5v328 make
++
++BOARD_TAG ?= uno
+diff --git a/examples/BlinkOpenCR/BlinkOpenCR.ino b/examples/BlinkOpenCR/BlinkOpenCR.ino
+new file mode 100644
+index 0000000..aabf2a8
+--- /dev/null
++++ b/examples/BlinkOpenCR/BlinkOpenCR.ino
+@@ -0,0 +1,48 @@
++/*
++ * Blink(LED)
++ */
++
++
++#define BDPIN_LED_USER_1        22
++#define BDPIN_LED_USER_2        23
++#define BDPIN_LED_USER_3        24
++#define BDPIN_LED_USER_4        25
++
++
++int led_pin = 13;
++int led_pin_user[4] = { BDPIN_LED_USER_1, BDPIN_LED_USER_2, BDPIN_LED_USER_3, BDPIN_LED_USER_4 };
++
++void setup() {
++  // Set up the built-in LED pin as an output:
++  pinMode(led_pin, OUTPUT);
++  pinMode(led_pin_user[0], OUTPUT);
++  pinMode(led_pin_user[1], OUTPUT);
++  pinMode(led_pin_user[2], OUTPUT);
++  pinMode(led_pin_user[3], OUTPUT);
++
++  Serial.begin(115200);
++
++}
++
++void loop() {
++  int i;
++
++  digitalWrite(led_pin, HIGH);  // set to as HIGH LED is turn-off
++  delay(100);                   // Wait for 0.1 second
++  digitalWrite(led_pin, LOW);   // set to as LOW LED is turn-on
++  delay(100);                   // Wait for 0.1 second
++
++
++  for( i=0; i<4; i++ )
++  {
++    digitalWrite(led_pin_user[i], HIGH);
++    delay(100);
++  }
++  for( i=0; i<4; i++ )
++  {
++    digitalWrite(led_pin_user[i], LOW);
++    delay(100);
++  }
++
++  Serial.println( String(10) );
++}
+diff --git a/examples/BlinkOpenCR/Makefile b/examples/BlinkOpenCR/Makefile
+new file mode 100644
+index 0000000..d4422f4
+--- /dev/null
++++ b/examples/BlinkOpenCR/Makefile
+@@ -0,0 +1,8 @@
++BOARD_TAG    = OpenCR
++
++
++ARDUINO_LIBS =
++
++#MONITOR_PORT = /dev/ttyACM0
++
++include ../../OpenCR.mk
+diff --git a/examples/DueBlink/DueBlink.ino b/examples/DueBlink/DueBlink.ino
+new file mode 100644
+index 0000000..f9a59a9
+--- /dev/null
++++ b/examples/DueBlink/DueBlink.ino
+@@ -0,0 +1,19 @@
++/*
++  Blink
++  Turns on an LED on for one second, then off for one second, repeatedly.
++
++  This example code is in the public domain.
++ */
++
++void setup() {
++  // initialize the digital pin as an output.
++  // Pin 13 has an LED connected on most Arduino boards:
++  pinMode(13, OUTPUT);
++}
++
++void loop() {
++  digitalWrite(13, HIGH);   // set the LED on
++  delay(1000);              // wait for a second
++  digitalWrite(13, LOW);    // set the LED off
++  delay(1000);              // wait for a second
++}
+diff --git a/examples/DueBlink/Makefile b/examples/DueBlink/Makefile
+new file mode 100644
+index 0000000..8a7ad6e
+--- /dev/null
++++ b/examples/DueBlink/Makefile
+@@ -0,0 +1,19 @@
++# Arduino Due uses SAM3X8E SAM chip
++BOARD_TAG = arduino_due_x
++ARCHITECTURE = sam
++
++# Define ARM toolchain dir if not using Arduino supplied
++#ARM_TOOLS_DIR = /usr
++
++# Define AVR toolchain dir if not using Arduino supplied and using native port
++#AVR_TOOLS_DIR = /usr
++
++# Define Arduino support package installation path where SAM device support has been installed
++# Linux
++#ARDUINO_PACKAGE_DIR := $(HOME)/.arduino15/packages
++# macOS
++#ARDUINO_PACKAGE_DIR := $(HOME)/Library/Arduino15/packages
++# Windows
++#ARDUINO_PACKAGE_DIR := "C:/Users/$(USER)/AppData/Local/Arduino15/packages"
++
++include ../../Sam.mk
+diff --git a/examples/MZeroBlink/MZeroBlink.ino b/examples/MZeroBlink/MZeroBlink.ino
+new file mode 100644
+index 0000000..f9a59a9
+--- /dev/null
++++ b/examples/MZeroBlink/MZeroBlink.ino
+@@ -0,0 +1,19 @@
++/*
++  Blink
++  Turns on an LED on for one second, then off for one second, repeatedly.
++
++  This example code is in the public domain.
++ */
++
++void setup() {
++  // initialize the digital pin as an output.
++  // Pin 13 has an LED connected on most Arduino boards:
++  pinMode(13, OUTPUT);
++}
++
++void loop() {
++  digitalWrite(13, HIGH);   // set the LED on
++  delay(1000);              // wait for a second
++  digitalWrite(13, LOW);    // set the LED off
++  delay(1000);              // wait for a second
++}
+diff --git a/examples/MZeroBlink/Makefile b/examples/MZeroBlink/Makefile
+new file mode 100644
+index 0000000..29cb90b
+--- /dev/null
++++ b/examples/MZeroBlink/Makefile
+@@ -0,0 +1,24 @@
++# Arduino M0 Pro Programming Port
++BOARD_TAG = mzero_pro_bl_dbg
++
++# Define debug if you want to use gdb
++#DEBUG = 1
++
++# Define port if using Black Magic Probe rather than default localhost:3333
++#GDB_PORT = /dev/ttyACM0
++
++# Define ARM toolchain dir if not using Arduino supplied
++#ARM_TOOLS_DIR = /usr
++
++# Define AVR toolchain dir if not using Arduino supplied and using native port
++#AVR_TOOLS_DIR = /usr
++
++# Define Arduino support package installation path where SAM device support has been installed
++# Linux
++# ARDUINO_PACKAGE_DIR := $(HOME)/.arduino15/packages
++# macOS
++# ARDUINO_PACKAGE_DIR := $(HOME)/Library/Arduino15/packages
++# Windows
++# ARDUINO_PACKAGE_DIR := "C:/Users/$(USER)/AppData/Local/Arduino15/packages"
++
++include ../../Sam.mk
+diff --git a/examples/ZeroBlink/Makefile b/examples/ZeroBlink/Makefile
+new file mode 100644
+index 0000000..60c8435
+--- /dev/null
++++ b/examples/ZeroBlink/Makefile
+@@ -0,0 +1,30 @@
++# Arduino Zero Native Port (should work with Feather, MKR1000 etc.)
++# BOOTLOADER: The bootloader on these devices loaded when reset is pressed twice
++# or the port is opened/closed at 1200 BAUD. If there is no program on the device,
++# you may have to manually enter bootloader by toggling reset twice.
++# see http://www.avdweb.nl/arduino/samd21/virus.html
++BOARD_TAG = arduino_zero_native
++
++# Define alternative core path if using another board supplier
++#ALTERNATE_CORE_PATH = $(HOME)/Arduino/hardware/sparkfun/samd
++
++# Define monitor port and isp port (bootloader port).
++# Will automatically detect if Linux/macOS but MUST be defined on Windows
++#MONITOR_PORT = com40 # CDC serial
++#ISP_PORT = com39 # bootloader
++
++# Define ARM toolchain dir if not using Arduino supplied
++#ARM_TOOLS_DIR = /usr
++
++# Define AVR toolchain dir if not using Arduino supplied and using native port
++#AVR_TOOLS_DIR = /usr
++
++# Define Arduino support package installation path where SAM device support has been installed
++# Linux
++#ARDUINO_PACKAGE_DIR := $(HOME)/.arduino15/packages
++# macOS
++#ARDUINO_PACKAGE_DIR := $(HOME)/Library/Arduino15/packages
++# Windows
++#ARDUINO_PACKAGE_DIR := "C:/Users/$(USER)/AppData/Local/Arduino15/packages"
++
++include ../../Sam.mk
+diff --git a/examples/ZeroBlink/ZeroBlink.ino b/examples/ZeroBlink/ZeroBlink.ino
+new file mode 100644
+index 0000000..f9a59a9
+--- /dev/null
++++ b/examples/ZeroBlink/ZeroBlink.ino
+@@ -0,0 +1,19 @@
++/*
++  Blink
++  Turns on an LED on for one second, then off for one second, repeatedly.
++
++  This example code is in the public domain.
++ */
++
++void setup() {
++  // initialize the digital pin as an output.
++  // Pin 13 has an LED connected on most Arduino boards:
++  pinMode(13, OUTPUT);
++}
++
++void loop() {
++  digitalWrite(13, HIGH);   // set the LED on
++  delay(1000);              // wait for a second
++  digitalWrite(13, LOW);    // set the LED off
++  delay(1000);              // wait for a second
++}
+diff --git a/packaging/fedora/arduino-mk.spec b/packaging/fedora/arduino-mk.spec
+index 61bf317..b1f07f1 100644
+--- a/packaging/fedora/arduino-mk.spec
++++ b/packaging/fedora/arduino-mk.spec
+@@ -39,6 +39,8 @@ install -m 755 bin/ard-reset-arduino %{buildroot}/%{_bindir}/ard-reset-arduino
+ install -m 644 ard-reset-arduino.1 %{buildroot}/%{_mandir}/man1
+ install -m 755 bin/robotis-loader %{buildroot}/%{_bindir}/robotis-loader
+ install -m 644 robotis-loader.1 %{buildroot}/%{_mandir}/man1
++install -m 755 bin/ardmk-init %{buildroot}/%{_bindir}/ardmk-init
++install -m 644 ardmk-init.1 %{buildroot}/%{_mandir}/man1
+ 
+ %clean
+ rm -rf %{buildroot}
+@@ -49,6 +51,8 @@ rm -rf %{buildroot}
+ %{_mandir}/man1/ard-reset-arduino.1*
+ %{_bindir}/robotis-loader
+ %{_mandir}/man1/robotis-loader.1*
++%{_bindir}/ardmk-init
++%{_mandir}/man1/ardmk-init.1*
+ %{_datadir}/arduino/*.mk
+ %{_datadir}/arduino/arduino-mk-vars.md
+ %doc %{_docdir}/%{name}/licence.txt
+@@ -56,6 +60,8 @@ rm -rf %{buildroot}
+ %{_docdir}/%{name}/examples
+ 
+ %changelog
++* Thu Oct 05 2017 Simon John <git@the-jedi.co.uk>
++- Added ardmk-init binary and manpage
+ * Tue Jul 11 2017 Karl Semich <fuzzyTew@gmail.com>
+ - Added robotis-loader binary and manpage
+ * Sat Apr 12 2014 Simon John <git@the-jedi.co.uk>
+diff --git a/tests/script/runtests.sh b/tests/script/runtests.sh
+index 7792186..fd05c30 100755
+--- a/tests/script/runtests.sh
++++ b/tests/script/runtests.sh
+@@ -7,7 +7,7 @@ failures=()
+ # These examples cannot be tested easily at the moment as they require
+ # alternate cores. The MakefileExample doesn't actually contain any source code
+ # to compile.
+-NON_TESTABLE_EXAMPLES=(ATtinyBlink MakefileExample TinySoftWareSerial BlinkOpenCM BlinkTeensy BlinkNetworkRPi BlinkInAVRC)
++NON_TESTABLE_EXAMPLES=(ATtinyBlink MakefileExample TinySoftWareSerial BlinkOpenCM BlinkOpenCR BlinkTeensy BlinkNetworkRPi BlinkInAVRC MZeroBlink ZeroBlink DueBlink)
+ 
+ for dir in $TESTS_DIR/*/
+ do
