@@ -29,6 +29,7 @@ DEPEND="${COMMONDEP}"
 
 PATCHES=(
 	"${FILESDIR}/${P}-105-commits-after.patch"
+	"${FILESDIR}/${P}-no-bossa-debug.patch"
 )
 
 src_unpack(){

@@ -1,0 +1,13 @@
+diff --git a/Sam.mk b/Sam.mk
+index a014e63..25e7e3d 100644
+--- a/Sam.mk
++++ b/Sam.mk
+@@ -286,7 +286,7 @@ else
+ endif
+ 
+ ifndef BOSSA_OPTS
+-    BOSSA_OPTS += -d --info --erase --write --verify --reset
++    BOSSA_OPTS += --info --erase --write --verify --reset
+     # Arduino Due forces RS-232 mode and boots from flash
+     ifeq ($(findstring arduino_due, $(strip $(VARIANT))), arduino_due)
+         BOSSA_OPTS += -U false -b
