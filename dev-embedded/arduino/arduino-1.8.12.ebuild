@@ -18,16 +18,19 @@ for docname in "${ARDUINO_DOCS[@]}"; do
 	ARDUINO_DOCS_URI+=" https://downloads.arduino.cc/${docname}.zip -> ${PN}-${docname}.zip"
 done
 
+AVR_CORE_V="1.8.2"
+WIFI_FU_V="0.10.10"
+
 SRC_URI="https://github.com/arduino/Arduino/archive/${PV}.tar.gz -> ${P}.tar.gz
-	https://downloads.arduino.cc/cores/avr-1.6.23.tar.bz2 -> ${PN}-avr-1.6.23.tar.bz2
-	https://github.com/arduino-libraries/WiFi101-FirmwareUpdater-Plugin/releases/download/v0.9.2/WiFi101-Updater-ArduinoIDE-Plugin-0.9.2.zip -> ${PN}-WiFi101-Updater-ArduinoIDE-Plugin-0.9.2.zip
+	https://downloads.arduino.cc/cores/avr-${AVR_CORE_V}.tar.bz2 -> ${PN}-avr-${AVR_CORE_V}.tar.bz2
+	https://github.com/arduino-libraries/WiFi101-FirmwareUpdater-Plugin/releases/download/v${WIFI_FU_V}/WiFi101-Updater-ArduinoIDE-Plugin-${WIFI_FU_V}.zip -> ${PN}-WiFi101-Updater-ArduinoIDE-Plugin-${WIFI_FU_V}.zip
 	doc? (
 		${ARDUINO_DOCS_URI}
 	)"
 
 LICENSE="GPL-2 LGPL-2.1 CC-BY-SA-3.0"
 SLOT="0"
-KEYWORDS="amd64 x86"
+KEYWORDS="~amd64 ~x86"
 IUSE="doc"
 
 CDEPEND="dev-embedded/arduino-builder"
@@ -61,8 +64,8 @@ src_unpack() {
 	# We don't want to unpack tools, just move zip files into the work dir
 	unpack `echo ${A} | cut -d ' ' -f1`
 
-	cp "${DISTDIR}/${PN}-avr-1.6.23.tar.bz2" "${S}/build/avr-1.6.23.tar.bz2" || die
-	cp "${DISTDIR}/${PN}-WiFi101-Updater-ArduinoIDE-Plugin-0.9.2.zip" "${S}/build/shared/WiFi101-Updater-ArduinoIDE-Plugin-0.9.2.zip"|| die
+	cp "${DISTDIR}/${PN}-avr-${AVR_CORE_V}.tar.bz2" "${S}/build/avr-${AVR_CORE_V}.tar.bz2" || die
+	cp "${DISTDIR}/${PN}-WiFi101-Updater-ArduinoIDE-Plugin-${WIFI_FU_V}.zip" "${S}/build/shared/WiFi101-Updater-ArduinoIDE-Plugin-${WIFI_FU_V}.zip" || die
 
 	if use doc; then
 		local docname

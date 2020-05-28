@@ -29,6 +29,7 @@ DEPEND="${COMMONDEP}"
 
 PATCHES=(
 	"${FILESDIR}/${P}-105-commits-after.patch"
+	"${FILESDIR}/${P}-no-bossa-debug.patch"
 )
 
 src_unpack(){
@@ -38,14 +39,16 @@ src_unpack(){
 }
 
 src_install(){
-	dobin bin/ard-reset-arduino
-	insinto /usr/share/arduino
-	doins Arduino.mk Teensy.mk Common.mk arduino-mk-vars.md chipKIT.mk
+	dobin bin/*
+	doman *.1
+
+	insinto /usr/share/arduino-mk
+	doins *.mk
+
 	if use doc; then
-		dodoc HISTORY.md ard-reset-arduino.1 README.md
+		dodoc HISTORY.md README.md arduino-mk-vars.md
 	fi
 	if use examples; then
-		insinto /usr/share/doc/"${P}"/
-		doins -r examples
+		dodoc -r examples
 	fi
 }
