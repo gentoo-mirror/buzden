@@ -1,0 +1,10 @@
+DEFINED_PHASES=install
+DESCRIPTION=Isabelle is a generic proof assistant.
+EAPI=7
+HOMEPAGE=https://isabelle.in.tum.de/
+KEYWORDS=~amd64
+LICENSE=BSD3
+SLOT=0
+SRC_URI=https://isabelle.in.tum.de/dist/Isabelle2020_linux.tar.gz
+_eclasses_=eutils	fcb2aa98e1948b835b5ae66ca52868c5
+_md5_=5df25088e173aefb0c8ef0d799c44457
