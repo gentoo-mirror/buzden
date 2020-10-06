@@ -1,0 +1,60 @@
+commit 20f025a225e47f88b86a848c8699e55ee2886ad8
+Author: Giuseppe Lomurno <lomurno.giuseppe97@gmail.com>
+Date:   Thu Aug 20 10:52:07 2020 +0200
+
+    Disable color and minor syntax additions
+
+diff --git a/ftplugin/idris2.vim b/ftplugin/idris2.vim
+index 5e8f163..4ef20e5 100644
+--- a/ftplugin/idris2.vim
++++ b/ftplugin/idris2.vim
+@@ -33,8 +33,9 @@ endfunction
+ 
+ function! s:IdrisCommand(...)
+   let idriscmd = shellescape(join(a:000))
+-"  echo("idris2 " . expand ('%:p') . " --client " . idriscmd)
+-  return system("idris2 --find-ipkg " . shellescape(expand('%:p')) . " --client " . idriscmd)
++  " Vim does not support ANSI escape codes natively, so we need to disable
++  " automatic colouring
++  return system("idris2 --no-color --find-ipkg " . shellescape(expand('%:p')) . " --client " . idriscmd)
+ endfunction
+ 
+ function! IdrisDocFold(lineNum)
+@@ -95,7 +96,7 @@ endfunction
+ function! IdrisReload(q)
+   w
+   let file = expand('%:p')
+-  let tc = system("idris2 --find-ipkg " . shellescape(file) . " --client ''")
++  let tc = system("idris2 --no-color --find-ipkg " . shellescape(file) . " --client ''")
+   if (! (tc is ""))
+     call IWrite(tc)
+   else
+diff --git a/syntax/idris2.vim b/syntax/idris2.vim
+index 0370493..b3e7bfc 100644
+--- a/syntax/idris2.vim
++++ b/syntax/idris2.vim
+@@ -26,7 +26,6 @@ syn keyword idrisStatement do case of rewrite with
+ syn keyword idrisLet let in
+ syn keyword idrisForall forall
+ syn keyword idrisDataOpt noHints uniqueSearch search external noNewtype containedin=idrisBrackets
+-syn match idrisSyntax "\(pattern \+\|term \+\)\?syntax"
+ syn keyword idrisConditional if then else
+ syn match idrisNumber "\<[0-9]\+\>\|\<0[xX][0-9a-fA-F]\+\>\|\<0[oO][0-7]\+\>"
+ syn match idrisFloat "\<[0-9]\+\.[0-9]\+\([eE][-+]\=[0-9]\+\)\=\>"
+@@ -38,7 +37,7 @@ syn keyword idrisTodo TODO FIXME XXX HACK contained
+ syn match idrisLineComment "---*\([^-!#$%&\*\+./<=>\?@\\^|~].*\)\?$" contains=idrisTodo,@Spell
+ syn match idrisDocComment "|||\([^-!#$%&\*\+./<=>\?@\\^|~].*\)\?$" contains=idrisTodo,@Spell
+ syn match idrisMetaVar "?[a-z][A-Za-z0-9_']*"
+-syn match idrisPragma "%\(hide\|logging\|auto_lazy\|unbound_implicits\|undotted_record_projections\|amibguity_depth\|pair\|rewrite\|integerLit\|stringLit\|charLit\|name\|start\|allow_overloads\|language\|default\|transform\|hint\|global_hint\|defaulthint\|inline\|extern\|macro\|spec\|foreign\|runElab\|tcinline\)"
++syn match idrisPragma "%\(hide\|logging\|auto_lazy\|unbound_implicits\|undotted_record_projections\|amibguity_depth\|pair\|rewrite\|integerLit\|stringLit\|charLit\|name\|start\|allow_overloads\|language\|default\|transform\|hint\|global_hint\|defaulthint\|inline\|extern\|macro\|spec\|foreign\|runElab\|tcinline\|defaulthint\|auto_implicit_depth\)"
+ syn match idrisChar "'[^'\\]'\|'\\.'\|'\\u[0-9a-fA-F]\{4}'"
+ syn match idrisBacktick "`[A-Za-z][A-Za-z0-9_']*`"
+ syn region idrisString start=+"+ skip=+\\\\\|\\"+ end=+"+ contains=@Spell
+@@ -59,7 +58,6 @@ highlight def link idrisAnnotation Statement
+ highlight def link idrisWhere Structure
+ highlight def link idrisLet Structure
+ highlight def link idrisTotality Statement
+-highlight def link idrisSyntax Statement
+ highlight def link idrisVisibility Statement
+ highlight def link idrisConditional Conditional
+ highlight def link idrisPragma Statement
