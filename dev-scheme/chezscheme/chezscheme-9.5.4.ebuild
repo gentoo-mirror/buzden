@@ -21,7 +21,7 @@ HOMEPAGE="https://cisco.github.io/ChezScheme/"
 LICENSE="Apache 2.0"
 
 PATCHES=(
-	"${FILESDIR}"/chezscheme-9.5.2-tinfo.patch
+	"${FILESDIR}"/chezscheme-9.5.4-tinfo.patch
 )
 
 src_prepare() {
