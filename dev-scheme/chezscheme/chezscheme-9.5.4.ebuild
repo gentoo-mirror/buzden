@@ -29,10 +29,11 @@ src_prepare() {
 	rm -r README*
 }
 
+# This should go automatically, but when `--64` and `--theads`,
+# configure should select `--machine=ta6le`, when not `--machine=a6le`.
 src_configure() {
 	./configure \
 		--64 \
-		--machine=a6le \
 		--threads \
 		--installprefix=/usr \
 		--installlib=/usr/lib64 \
