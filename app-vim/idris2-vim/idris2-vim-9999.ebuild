@@ -25,7 +25,7 @@ HOMEPAGE="https://github.com/edwinb/idris2-vim/"
 VIM_PLUGIN_HELPFILES="${PN}.txt"
 
 PATCHES=(
-	"${FILESDIR}/${PN}-pr16.patch"
+#	"${FILESDIR}/${PN}-pr16.patch"
 )
 
 src_prepare() {
