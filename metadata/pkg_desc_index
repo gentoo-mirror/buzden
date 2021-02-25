@@ -6,6 +6,7 @@ dev-lang/idris 1.3.2-r1: Functional Programming Language with Dependent Types
 dev-ml/cppo 1.6.6: An equivalent of the C preprocessor for OCaml programs
 dev-python/pygments 2.4.2-r1 2.5.2-r1: Pygments is a syntax highlighting package written in Python
 dev-scheme/chezscheme 9.5.4: Chez Scheme programming language and implementation
+dev-util/idea-community 2020.2.4.202.8194.7: A complete toolset for web, mobile and enterprise development
 sci-mathematics/dafny 2.2.31219.0706 2.2.41003.0703: Dafny: a language and program verifier for functional correctness
 sci-mathematics/frama-c 20150201_p4: Framework for analysis of source codes written in C
 sci-mathematics/isabelle 2020: Isabelle is a generic proof assistant.
