@@ -1,5 +1,5 @@
 diff --git a/ftplugin/idris2.vim b/ftplugin/idris2.vim
-index 4ef20e5..8a8fa4b 100644
+index 4ef20e5..008d04c 100644
 --- a/ftplugin/idris2.vim
 +++ b/ftplugin/idris2.vim
 @@ -35,7 +35,7 @@ function! s:IdrisCommand(...)
@@ -11,3 +11,23 @@ index 4ef20e5..8a8fa4b 100644
  endfunction
  
  function! IdrisDocFold(lineNum)
+@@ -79,7 +79,7 @@ function! IdrisShowResponseWin()
+   let g:idris_respwin = "active"
+ endfunction
+ 
+-function! IWrite(str)
++function! IWriteD(str)
+   if (bufexists("idris-response"))
+     let save_cursor = getcurpos()
+     b idris-response
+@@ -93,6 +93,10 @@ function! IWrite(str)
+   endif
+ endfunction
+ 
++function! IWrite(str)
++  call IWriteD(substitute(a:str, "^.* Building .* (.*\.idr)\n", "", ""))
++endfunction
++
+ function! IdrisReload(q)
+   w
+   let file = expand('%:p')
