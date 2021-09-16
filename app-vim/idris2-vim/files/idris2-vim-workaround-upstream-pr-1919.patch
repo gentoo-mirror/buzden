@@ -1,0 +1,13 @@
+diff --git a/ftplugin/idris2.vim b/ftplugin/idris2.vim
+index 4ef20e5..8a8fa4b 100644
+--- a/ftplugin/idris2.vim
++++ b/ftplugin/idris2.vim
+@@ -35,7 +35,7 @@ function! s:IdrisCommand(...)
+   let idriscmd = shellescape(join(a:000))
+   " Vim does not support ANSI escape codes natively, so we need to disable
+   " automatic colouring
+-  return system("idris2 --no-color --find-ipkg " . shellescape(expand('%:p')) . " --client " . idriscmd)
++  return system("idris2 --no-color --verbose --find-ipkg " . shellescape(expand('%:p')) . " --client " . idriscmd)
+ endfunction
+ 
+ function! IdrisDocFold(lineNum)
