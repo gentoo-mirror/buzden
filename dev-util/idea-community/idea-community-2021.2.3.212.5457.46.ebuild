@@ -7,23 +7,24 @@ inherit eutils desktop
 SLOT="0"
 PV_STRING="$(ver_cut 2-6)"
 MY_PV="$(ver_cut 1-3)"
+
 MY_PN="idea"
 # Using the most recent Jetbrains Runtime binaries available at the time of writing
-# ( jre 11.0.8 build 1098.1  )
-JRE11_BASE="11_0_8"
-JRE11_VER="1098.1"
+# ( jre 11.0.10 build 1304.4  )
+JRE11_BASE="11_0_11"
+JRE11_VER="1504.5"
+IDEA_VER="2.157861308.704681908.1634561297-1608238442.1631355834"
 
 # distinguish settings for official stable releases and EAP-version releases
 if [[ "$(ver_cut 7)"x = "prex" ]]
 then
 	# upstream EAP
-	KEYWORDS="~arm64"
-	SRC_URI="https://download.jetbrains.com/idea/${MY_PN}IC-${PV_STRING}.tar.gz"
+	SRC_URI="https://download.jetbrains.com/idea/${MY_PN}IC-${MY_PV}.tar.gz?_ga=${IDEA_VER}"
 else
 	# upstream stable
 	KEYWORDS="~amd64 ~arm64"
-	SRC_URI="https://download.jetbrains.com/idea/${MY_PN}IC-${MY_PV}-no-jbr.tar.gz -> ${MY_PN}IC-${PV_STRING}.tar.gz
-		amd64? ( https://bintray.com/jetbrains/intellij-jbr/download_file?file_path=jbr-${JRE11_BASE}-linux-x64-b${JRE11_VER}.tar.gz -> jbr-${JRE11_BASE}-linux-x64-b${JRE11_VER}.tar.gz )"
+	SRC_URI="https://download.jetbrains.com/idea/${MY_PN}IC-${MY_PV}-no-jbr.tar.gz?_ga=${IDEA_VER} -> ${MY_PN}IC-${PV_STRING}.tar.gz
+		amd64? ( https://cache-redirector.jetbrains.com/intellij-jbr/jbrsdk-${JRE11_BASE}-linux-x64-b${JRE11_VER}.tar.gz -> jbr-${JRE11_BASE}-linux-x64-b${JRE11_VER}.tar.gz )"
 fi
 
 DESCRIPTION="A complete toolset for web, mobile and enterprise development"
@@ -35,20 +36,16 @@ LICENSE="Apache-2.0 BSD BSD-2 CC0-1.0 CC-BY-2.5 CDDL-1.1
 	JDOM LGPL-2.1 LGPL-2.1+ LGPL-3-with-linking-exception MIT
 	MPL-1.0 MPL-1.1 OFL ZLIB"
 
-DEPEND="!dev-util/${PN}:14
-	!dev-util/${PN}:15
+DEPEND="
 	|| (
-		dev-java/openjdk:11
-		dev-java/openjdk-bin:11
+		>=dev-java/openjdk-11.0.11_p9-r1:11
+		>=dev-java/openjdk-bin-11.0.11_p9-r1:11
 	)"
 RDEPEND="${DEPEND}
 	dev-java/jansi-native
 	dev-libs/libdbusmenu
-	=dev-util/lldb-10*
-	|| (
-		dev-java/openjdk:11
-		dev-java/openjdk-bin:11
-	)"
+	media-libs/harfbuzz"
+
 BDEPEND="dev-util/patchelf"
 RESTRICT="splitdebug"
 S="${WORKDIR}/${MY_PN}-IC-$(ver_cut 4-6)"
@@ -76,6 +73,8 @@ src_prepare() {
 
 	PLUGIN_DIR="${S}/${JRE_DIR}/lib/"
 
+	# rm LLDBFrontEnd after licensing questions with Gentoo License Team
+	rm -vf "${S}"/plugins/Kotlin/bin/linux/LLDBFrontend
 	rm -vf ${PLUGIN_DIR}/libavplugin*
 	rm -vf "${S}"/plugins/maven/lib/maven3/lib/jansi-native/*/libjansi*
 	rm -vrf "${S}"/lib/pty4j-native/linux/ppc64le
@@ -91,11 +90,11 @@ src_prepare() {
 		done
 	fi
 
-	patchelf --replace-needed liblldb.so liblldb.so.10 "${S}"/plugins/Kotlin/bin/linux/LLDBFrontend || die "Unable to patch LLDBFrontend for lldb"
 	if use arm64; then
 		patchelf --replace-needed libc.so libc.so.6 "${S}"/lib/pty4j-native/linux/aarch64/libpty.so || die "Unable to patch libpty for libc"
 	else
-		rm -vf "${S}"/lib/pty4j-native/linux/aarch64/libpty.so
+		rm -vf "${S}"/lib/pty4j-native/linux/{aarch64,arm,x86}/libpty.so
+		patchelf --replace-needed libc.so libc.so.6 "${S}"/lib/pty4j-native/linux/x86-64/libpty.so || die "Unable to patch libpty for libc"
 	fi
 
 	sed -i \
@@ -114,7 +113,7 @@ src_install() {
 
 	insinto "${dir}"
 	doins -r *
-	fperms 755 "${dir}"/bin/{format.sh,idea.sh,inspect.sh,printenv.py,restart.py,fsnotifier{,64}}
+	fperms 755 "${dir}"/bin/{format.sh,idea.sh,inspect.sh,printenv.py,restart.py,fsnotifier}
 	if use amd64; then
 		JRE_DIR=jre64
 	else
@@ -135,4 +134,7 @@ src_install() {
 	# recommended by: https://confluence.jetbrains.com/display/IDEADEV/Inotify+Watches+Limit
 	mkdir -p "${D}/etc/sysctl.d/" || die
 	echo "fs.inotify.max_user_watches = 524288" > "${D}/etc/sysctl.d/30-idea-inotify-watches.conf" || die
+
+	# remove bundled harfbuzz
+	rm -f "${D}"/lib/libharfbuzz.so || die
 }
