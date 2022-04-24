@@ -2,5 +2,5 @@ app-vim/idris2-vim 9999: Vim mode for Idris 2
 dev-embedded/arduino-mk 1.6.0-r2: Makefile for Arduino sketches.
 dev-python/sphinxcontrib-inlinesyntaxhighlight 0.2: Sphinx extension which enables syntax highlighting of inline code
 dev-scheme/chezscheme 9.5.4: Chez Scheme programming language and implementation
-dev-util/idea-community 2020.2.4.202.8194.7: A complete toolset for web, mobile and enterprise development
+dev-util/idea-community 2021.2.3.212.5457.46: A complete toolset for web, mobile and enterprise development
 sci-mathematics/isabelle 2020: Isabelle is a generic proof assistant.
