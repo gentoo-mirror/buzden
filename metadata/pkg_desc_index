@@ -1,4 +1,3 @@
 app-vim/idris2-vim 9999: Vim mode for Idris 2
 dev-embedded/arduino-mk 1.6.0-r2: Makefile for Arduino sketches.
 dev-python/sphinxcontrib-inlinesyntaxhighlight 0.2: Sphinx extension which enables syntax highlighting of inline code
-dev-scheme/chezscheme 9.5.4: Chez Scheme programming language and implementation
