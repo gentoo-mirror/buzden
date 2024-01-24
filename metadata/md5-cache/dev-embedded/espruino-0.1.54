@@ -1,0 +1,10 @@
+BDEPEND=>=net-libs/nodejs-16[npm]
+DEFINED_PHASES=compile install setup
+DESCRIPTION=A set of tools for the Espruino JavaScript interpreter, including command-line
+EAPI=8
+HOMEPAGE=https://github.com/espruino/EspruinoTools
+KEYWORDS=~amd64
+LICENSE=Apache-2.0
+RDEPEND=net-libs/nodejs
+SLOT=0
+_md5_=df65483410d05ffe1e91e737411f14ba

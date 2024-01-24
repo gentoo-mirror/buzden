@@ -1,3 +1,5 @@
 app-vim/idris2-vim 9999: Vim mode for Idris 2
 dev-embedded/arduino-mk 1.6.0-r2: Makefile for Arduino sketches.
+dev-embedded/espruino 0.1.54: A set of tools for the Espruino JavaScript interpreter, including command-line
 dev-python/sphinxcontrib-inlinesyntaxhighlight 0.2: Sphinx extension which enables syntax highlighting of inline code
+dev-util/rollup 4.9.6: The JavaScript module bundler
