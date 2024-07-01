@@ -1,0 +1,12 @@
+DEFINED_PHASES=install unpack
+DEPEND=dev-embedded/arduino dev-python/pyserial
+DESCRIPTION=Makefile for Arduino sketches.
+EAPI=8
+HOMEPAGE=https://github.com/sudar/Arduino-Makefile
+IUSE=+monitor doc examples
+KEYWORDS=~amd64 ~x86
+LICENSE=GPL-2
+RDEPEND=dev-embedded/arduino dev-python/pyserial dev-embedded/avrdude monitor? ( app-misc/screen )
+SLOT=0
+SRC_URI=https://github.com/sudar/Arduino-Makefile/archive/1.6.0.tar.gz
+_md5_=bfc29226d71a2698ecb6c553f303c54b
